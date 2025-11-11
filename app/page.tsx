@@ -22,7 +22,7 @@ type MessageModel = {
 export default function Home() {
   const [messages, setMessages] = useState<MessageModel[]>([
     {
-      message: "Hi! I'm your AI assistant.",
+      message: "Hi! I'm your AI assistant rex2.",
       sentTime: "just now",
       sender: "bot",
       direction: "incoming",

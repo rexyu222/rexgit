@@ -4,7 +4,7 @@ export async function POST(req: Request) {
   
   // Call your backend
   //const res = await fetch('https://your-backend.com/chat', {
-  const res = await fetch('https://18.117.20.12/chat', {
+  const res = await fetch('https://proud1776ai.com/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt: message })
