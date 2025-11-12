@@ -11,6 +11,17 @@ import {
 } from '@chatscope/chat-ui-kit-react';
 import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css';
 
+// ... your existing imports
+import LoginButton from './auth/login-button';
+
+// Inside return():
+<div style={{ height: '100vh', maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+  <LoginButton />
+  <MainContainer>
+    {/* rest of your chat UI */}
+  </MainContainer>
+</div>
+
 type MessageModel = {
   message: string;
   sentTime: string;
