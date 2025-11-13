@@ -42,15 +42,9 @@ export default function LoginButton() {
     window.location.href = 'https://proud1776ai.com/auth/login';
   };
 
-  const logout = async () => {
-    await fetch('https://proud1776ai.com/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-      mode: 'cors',
-    });
-    setUser(null);
-    window.location.reload();
-  };
+  const logout = () => {
+  window.location.href = 'https://proud1776ai.com/auth/logout';
+};
 
   if (loading) return <div>Loading user...</div>;
 
@@ -77,3 +71,4 @@ export default function LoginButton() {
     <button onClick={login}>Sign in with Google</button>
   );
 }
+
