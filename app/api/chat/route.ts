@@ -9,7 +9,8 @@ export async function POST(req: Request) {
       // Forward the session cookie automatically via credentials
     },
     body: JSON.stringify({ prompt: message }),
-    credentials: 'include'  // This is key!
+    credentials: 'include',  // This is key!
+    mode: 'cors',
   });
 
   if (!res.ok) {

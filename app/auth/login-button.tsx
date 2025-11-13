@@ -12,6 +12,7 @@ export default function LoginButton() {
       const res = await fetch('https://proud1776ai.com/api/me', {
         method: 'GET',
         credentials: 'include',  // This sends the session_id cookie
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -45,6 +46,7 @@ export default function LoginButton() {
     await fetch('https://proud1776ai.com/auth/logout', {
       method: 'POST',
       credentials: 'include',
+      mode: 'cors',
     });
     setUser(null);
     window.location.reload();
