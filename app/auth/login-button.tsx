@@ -1,5 +1,6 @@
+// app/auth/login-button.tsx
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function LoginButton() {
   const [user, setUser] = useState<any>(null);
@@ -7,17 +8,34 @@ export default function LoginButton() {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch('https://proud1776ai.com/api/me', { credentials: 'include' });
+      console.log("Fetching user from backend...");
+      const res = await fetch('https://proud1776ai.com/api/me', {
+        method: 'GET',
+        credentials: 'include',  // This sends the session_id cookie
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
       if (res.ok) {
         const data = await res.json();
+        console.log("User loaded:", data);
         setUser(data);
+      } else {
+        console.log("Not logged in:", res.status);
+        setUser(null);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error("Fetch failed:", err);
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   const login = () => {
     window.location.href = 'https://proud1776ai.com/auth/login';
@@ -26,23 +44,32 @@ export default function LoginButton() {
   const logout = async () => {
     await fetch('https://proud1776ai.com/auth/logout', {
       method: 'POST',
-      credentials: 'include'
+      credentials: 'include',
     });
     setUser(null);
+    window.location.reload();
   };
 
-  // Check on mount
-  useState(() => {
-    fetchUser();
-  });
-
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div>Loading user...</div>;
 
   return user ? (
-    <div style={{ padding: '10px', background: '#eee', borderRadius: '8px' }}>
-      <img src={user.picture} alt="avatar" style={{ width: 40, height: 40, borderRadius: '50%' }} />
-      <span style={{ marginLeft: 10 }}>{user.name || user.email}</span>
-      <button onClick={logout} style={{ marginLeft: 10 }}>Logout</button>
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '10px', 
+      padding: '10px', 
+      background: '#f0f0f0', 
+      borderRadius: '8px' 
+    }}>
+      {user.picture && (
+        <img 
+          src={user.picture} 
+          alt="avatar" 
+          style={{ width: 40, height: 40, borderRadius: '50%' }} 
+        />
+      )}
+      <span>{user.name || user.email}</span>
+      <button onClick={logout}>Logout</button>
     </div>
   ) : (
     <button onClick={login}>Sign in with Google</button>
