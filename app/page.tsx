@@ -40,7 +40,7 @@ export default function Home() {
     setMessages(prev => [...prev, userMsg]);
     setTyping(true);
     try {
-      const res = await fetch('${BACKEND_URL}/chat', {
+      const res = await fetch(`${BACKEND_URL}/chat`, {
         method: 'POST',
         credentials: 'include', // ← Cookie sent from browser
         headers: {
