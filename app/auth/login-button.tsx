@@ -1,74 +1,72 @@
 // app/auth/login-button.tsx
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 
 export default function LoginButton() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchUser = async () => {
-    try {
-      console.log("Fetching user from backend...");
-      const res = await fetch('https://proud1776ai.com/api/me', {
-        method: 'GET',
-        credentials: 'include',  // This sends the session_id cookie
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        console.log("User loaded:", data);
-        setUser(data);
-      } else {
-        console.log("Not logged in:", res.status);
-        setUser(null);
-      }
-    } catch (err) {
-      console.error("Fetch failed:", err);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [user, setUser] = useState<{ email?: string; name?: string; picture?: string } | null>(null);
 
   useEffect(() => {
-    fetchUser();
+    fetch('https://proud1776ai.com/api/me', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setUser(data))
+      .catch(() => setUser(null));
   }, []);
 
-  const login = () => {
-    window.location.href = 'https://proud1776ai.com/auth/login';
-  };
+  if (user) {
+    return (
+      <div style={{
+        textAlign: 'center',
+        padding: '16px',
+        background: '#000',
+        color: '#fff',
+        borderRadius: '12px',
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        fontFamily: 'system-ui, sans-serif'
+      }}>
+        {user.picture && (
+          <img src={user.picture} alt={user.name || 'User'} style={{ width: 36, height: 36, borderRadius: '50%' }} />
+        )}
+        <span>{user.name || user.email}</span>
+        <form action="https://proud1776ai.com/auth/logout" method="get">
+          <button type="submit" style={{
+            background: 'none',
+            border: '1px solid #444',
+            color: '#fff',
+            padding: '6px 16px',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}>
+            Logout
+          </button>
+        </form>
+      </div>
+    );
+  }
 
-  const logout = () => {
-  window.location.href = 'https://proud1776ai.com/auth/logout';
-};
-
-  if (loading) return <div>Loading user...</div>;
-
-  return user ? (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '10px', 
-      padding: '10px', 
-      background: '#f0f0f0', 
-      borderRadius: '8px' 
-    }}>
-      {user.picture && (
-        <img 
-          src={user.picture} 
-          alt="avatar" 
-          style={{ width: 40, height: 40, borderRadius: '50%' }} 
-        />
-      )}
-      <span>{user.name || user.email}</span>
-      <button onClick={logout}>Logout</button>
+  return (
+    <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+      <a
+        href="https://proud1776ai.com/auth/login"
+        style={{
+          display: 'inline-block',
+          background: '#000',
+          color: '#fff',
+          padding: '14px 32px',
+          borderRadius: '12px',
+          textDecoration: 'none',
+          fontWeight: '600',
+          fontSize: '18px',
+          fontFamily: 'system-ui, sans-serif',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        }}
+      >
+        Sign in with Google
+      </a>
     </div>
-  ) : (
-    <button onClick={login}>Sign in with Google</button>
   );
 }
-

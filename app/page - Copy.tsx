@@ -10,8 +10,6 @@ import {
   TypingIndicator,
 } from '@chatscope/chat-ui-kit-react';
 import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css';
-
-// ... your existing imports
 import LoginButton from './auth/login-button';
 
 type MessageModel = {
@@ -21,6 +19,8 @@ type MessageModel = {
   direction: 'incoming' | 'outgoing';
   position: 'single' | 'first' | 'last' | 'normal';
 };
+
+const BACKEND_URL = 'https://proud1776ai.com'; // your EC2 domain
 
 export default function Home() {
   const [messages, setMessages] = useState<MessageModel[]>([
@@ -32,44 +32,78 @@ export default function Home() {
       position: "single",
     },
   ]);
+
   const [typing, setTyping] = useState(false);
 
   const sendMessage = async (text: string) => {
+    if (!text.trim()) return;
+
     const userMsg: MessageModel = {
       message: text,
       sender: "user",
       direction: "outgoing",
-      sentTime: "now",
+      sentTime: "just now",
       position: "single",
     };
+
     setMessages(prev => [...prev, userMsg]);
     setTyping(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch(`${BACKEND_URL}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        credentials: 'include', // important for cookies/sessions
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: text }),
       });
-      const data = await res.json();
+
+      // Always log status for debugging
+      console.log('Response status:', res.status, res.ok);
+
+      let botReply = "Sorry, something went wrong. Please try again.";
+
+      if (res.ok) {
+        try {
+          const data = await res.json();
+          botReply = data.reply || data.message || "I'm thinking...";
+        } catch (jsonErr) {
+          console.error('Failed to parse JSON:', jsonErr);
+          const textBody = await res.clone().text();
+          console.error('Raw response body:', textBody);
+          botReply = "Received invalid response from server.";
+        }
+      } else {
+        // Non-200 status
+        const errorText = await res.text();
+        console.error(`Server error ${res.status}:`, errorText);
+        botReply = `Server error: ${res.status} – ${errorText || 'Unknown error'}`;
+      }
 
       const botMsg: MessageModel = {
-        message: data.reply || "I'm thinking...",
+        message: botReply,
         sender: "bot",
         direction: "incoming",
-        sentTime: "now",
+        sentTime: "just now",
         position: "single",
       };
+
       setMessages(prev => [...prev, botMsg]);
-    } catch (err) {
-      console.error(err);
-      setMessages(prev => [...prev, {
-        message: "Error: Could not reach server",
+    } catch (err: any) {
+      console.error('Network or fetch error:', err);
+
+      const errorMessage = err?.message || 'Connection failed';
+
+      const errorMsg: MessageModel = {
+        message: `Error: ${errorMessage}`,
         sender: "bot",
         direction: "incoming",
-        sentTime: "now",
+        sentTime: "just now",
         position: "single",
-      }]);
+      };
+
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setTyping(false);
     }
@@ -77,23 +111,31 @@ export default function Home() {
 
   return (
     <div style={{ height: '100vh', maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-       <LoginButton />
-       <MainContainer>
+      <LoginButton />
+      <MainContainer>
         <ChatContainer>
           <MessageList
-            typingIndicator={typing && <TypingIndicator content="Bot is typing..." />}
+            typingIndicator={typing && <TypingIndicator content="rex2 is typing..." />}
           >
             {messages.map((m, i) => (
-              <Message key={i} model={m} />
+              <Message
+                key={i}
+                model={{
+                  ...m,
+                  // Fix avatar if you want
+                  // avatar: m.sender === 'bot' ? '/bot-avatar.png' : undefined
+                }}
+              />
             ))}
           </MessageList>
           <MessageInput
-            placeholder="Type your message..."
+            placeholder="Ask me about jogging history..."
             onSend={sendMessage}
             attachButton={false}
+            autoFocus
           />
         </ChatContainer>
       </MainContainer>
     </div>
   );
-}
+} 
