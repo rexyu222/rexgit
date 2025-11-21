@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   MainContainer,
   ChatContainer,
@@ -20,7 +20,14 @@ type MessageModel = {
   position: 'single' | 'first' | 'last' | 'normal';
 };
 
-const BACKEND_URL = 'https://proud1776ai.com';
+const BACKEND_URL = 'https://proud1776ai.com'; // your EC2 domain
+
+// Force all relative paths to go to your real domain
+const API_URL = typeof window !== 'undefined' 
+  ? 'https://proud1776ai.com' 
+  : '';
+
+fetch(`${API_URL}/api/me`, { credentials: 'include' })
 
 export default function Home() {
   const [messages, setMessages] = useState<MessageModel[]>([
@@ -38,19 +45,6 @@ export default function Home() {
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
 
-    const token = localStorage.getItem("jwt");
-
-    if (!token) {
-      setMessages(prev => [...prev, {
-        message: "Please log in first.",
-        sender: "bot",
-        direction: "incoming",
-        sentTime: "now",
-        position: "single"
-      }]);
-      return;
-    }
-
     const userMsg: MessageModel = {
       message: text,
       sender: "user",
@@ -65,41 +59,61 @@ export default function Home() {
     try {
       const res = await fetch(`${BACKEND_URL}/chat`, {
         method: 'POST',
+        credentials: 'include', // important for cookies/sessions
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ prompt: text }),
       });
 
-      let botReply = "Server error.";
+      // Always log status for debugging
+      console.log('Response status:', res.status, res.ok);
+
+      let botReply = "Sorry, something went wrong. Please try again.";
 
       if (res.ok) {
-        const data = await res.json();
-        botReply = data.reply;
+        try {
+          const data = await res.json();
+          botReply = data.reply || data.message || "I'm thinking...";
+        } catch (jsonErr) {
+          console.error('Failed to parse JSON:', jsonErr);
+          const textBody = await res.clone().text();
+          console.error('Raw response body:', textBody);
+          botReply = "Received invalid response from server.";
+        }
       } else {
-        botReply = await res.text();
+        // Non-200 status
+        const errorText = await res.text();
+        console.error(`Server error ${res.status}:`, errorText);
+        botReply = `Server error: ${res.status} – ${errorText || 'Unknown error'}`;
       }
 
-      setMessages(prev => [...prev, {
+      const botMsg: MessageModel = {
         message: botReply,
         sender: "bot",
         direction: "incoming",
-        sentTime: "now",
-        position: "single"
-      }]);
+        sentTime: "just now",
+        position: "single",
+      };
 
+      setMessages(prev => [...prev, botMsg]);
     } catch (err: any) {
-      setMessages(prev => [...prev, {
-        message: "Network error: " + err.message,
+      console.error('Network or fetch error:', err);
+
+      const errorMessage = err?.message || 'Connection failed';
+
+      const errorMsg: MessageModel = {
+        message: `Error: ${errorMessage}`,
         sender: "bot",
         direction: "incoming",
-        sentTime: "now",
-        position: "single"
-      }]);
-    }
+        sentTime: "just now",
+        position: "single",
+      };
 
-    setTyping(false);
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setTyping(false);
+    }
   };
 
   return (
@@ -111,16 +125,24 @@ export default function Home() {
             typingIndicator={typing && <TypingIndicator content="rex2 is typing..." />}
           >
             {messages.map((m, i) => (
-              <Message key={i} model={m} />
+              <Message
+                key={i}
+                model={{
+                  ...m,
+                  // Fix avatar if you want
+                  // avatar: m.sender === 'bot' ? '/bot-avatar.png' : undefined
+                }}
+              />
             ))}
           </MessageList>
           <MessageInput
-            placeholder="Ask me about jogging..."
+            placeholder="Ask me about jogging history..."
             onSend={sendMessage}
             attachButton={false}
+            autoFocus
           />
         </ChatContainer>
       </MainContainer>
     </div>
   );
-}
+} 
