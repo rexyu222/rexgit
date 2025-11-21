@@ -22,6 +22,13 @@ type MessageModel = {
 
 const BACKEND_URL = 'https://proud1776ai.com'; // your EC2 domain
 
+// Force all relative paths to go to your real domain
+const API_URL = typeof window !== 'undefined' 
+  ? 'https://proud1776ai.com' 
+  : '';
+
+fetch(`${API_URL}/api/me`, { credentials: 'include' })
+
 export default function Home() {
   const [messages, setMessages] = useState<MessageModel[]>([
     {
