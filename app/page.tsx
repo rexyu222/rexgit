@@ -20,7 +20,8 @@ type MessageModel = {
   position: 'single' | 'first' | 'last' | 'normal';
 };
 
-const BACKEND_URL = 'https://proud1776ai.com'; // your EC2 domain
+//const BACKEND_URL = 'https://proud1776ai.com'; // your EC2 domain
+const BACKEND_URL = ''; // your EC2 domain
 
 export default function Home() {
   const [messages, setMessages] = useState<MessageModel[]>([
