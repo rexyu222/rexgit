@@ -76,10 +76,21 @@ export default function Page() {
           Sign in with Google
         </button>
       ) : (
-        <div className="flex items-center gap-2">
-          <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
-          <span className="font-semibold">{user.name}</span>
+        <div className="flex items-center gap-4">
+            <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
+            <span className="font-semibold">{user.name}</span>
+
+            <button
+               onClick={() => {
+                                localStorage.removeItem('jwt');
+                                window.location.reload();
+               }}
+               className="px-3 py-1 bg-red-600 text-white rounded"
+            >
+                 Logout
+            </button>
         </div>
+
       )}
 
       {/* Chat messages */}
