@@ -1,126 +1,106 @@
+// Patched page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  MainContainer,
-  ChatContainer,
-  MessageList,
-  Message,
-  MessageInput,
-  TypingIndicator,
-} from '@chatscope/chat-ui-kit-react';
-import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css';
-import LoginButton from './auth/login-button';
+import React, { useEffect, useState } from 'react';
 
-type MessageModel = {
-  message: string;
-  sentTime: string;
-  sender: string;
-  direction: 'incoming' | 'outgoing';
-  position: 'single' | 'first' | 'last' | 'normal';
+type ChatMessage = {
+  role: "user" | "bot";
+  text: string;
 };
 
-const BACKEND_URL = 'https://proud1776ai.com';
+type UserInfo = {
+  email: string;
+  name: string;
+  picture: string;
+};
 
-export default function Home() {
-  const [messages, setMessages] = useState<MessageModel[]>([
-    {
-      message: "Hi! I'm your AI assistant rex2.",
-      sentTime: "just now",
-      sender: "bot",
-      direction: "incoming",
-      position: "single",
-    },
-  ]);
+export default function Page() {
+  const [user, setUser] = useState<UserInfo | null>(null);
 
-  const [typing, setTyping] = useState(false);
+  const [prompt, setPrompt] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim()) return;
+  const BACKEND_URL = 'https://proud1776ai.com';
 
-    const token = localStorage.getItem("jwt");
+  {!user ? (
+  <button
+    onClick={() => {
+      window.location.href = "https://proud1776ai.com/auth/login";
+    }}
+    className="your-button"
+  >
+    Sign in with Google
+  </button>
+) : (
+  <div className="flex items-center gap-2">
+    <img
+      src={user.picture}
+      alt="avatar"
+      className="w-8 h-8 rounded-full"
+    />
+    <span>{user.name}</span>
+  </div>
+)}
 
+
+  const sendMessage = async () => {
+    const token = localStorage.getItem('jwt');
     if (!token) {
-      setMessages(prev => [...prev, {
-        message: "Please log in first.",
-        sender: "bot",
-        direction: "incoming",
-        sentTime: "now",
-        position: "single"
-      }]);
+      alert('Please sign in first');
       return;
     }
 
-    const userMsg: MessageModel = {
-      message: text,
-      sender: "user",
-      direction: "outgoing",
-      sentTime: "just now",
-      position: "single",
-    };
+    const res = await fetch(`${BACKEND_URL}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ prompt }),
+    });
 
-    setMessages(prev => [...prev, userMsg]);
-    setTyping(true);
-
-    try {
-      const res = await fetch(`${BACKEND_URL}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ prompt: text }),
-      });
-
-      let botReply = "Server error.";
-
-      if (res.ok) {
-        const data = await res.json();
-        botReply = data.reply;
-      } else {
-        botReply = await res.text();
-      }
-
-      setMessages(prev => [...prev, {
-        message: botReply,
-        sender: "bot",
-        direction: "incoming",
-        sentTime: "now",
-        position: "single"
-      }]);
-
-    } catch (err: any) {
-      setMessages(prev => [...prev, {
-        message: "Network error: " + err.message,
-        sender: "bot",
-        direction: "incoming",
-        sentTime: "now",
-        position: "single"
-      }]);
-    }
-
-    setTyping(false);
+    const data = await res.json();
+    setMessages((prev) => [...prev, { role: 'user', text: prompt }, { role: 'bot', text: data.response }]);
+    setPrompt('');
   };
 
   return (
-    <div style={{ height: '100vh', maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-      <LoginButton />
-      <MainContainer>
-        <ChatContainer>
-          <MessageList
-            typingIndicator={typing && <TypingIndicator content="rex2 is typing..." />}
-          >
-            {messages.map((m, i) => (
-              <Message key={i} model={m} />
-            ))}
-          </MessageList>
-          <MessageInput
-            placeholder="Ask me about jogging..."
-            onSend={sendMessage}
-            attachButton={false}
-          />
-        </ChatContainer>
-      </MainContainer>
+    <div className="p-4 space-y-4">
+      {!user ? (
+        <button
+          onClick={() => {
+            window.location.href = `${BACKEND_URL}/auth/login`;
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded"
+        >
+          Sign in with Google
+        </button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
+          <span className="font-semibold">{user.name}</span>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {messages.map((m, i) => (
+          <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
+            <span className="inline-block p-2 bg-gray-200 rounded">{m.text}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="flex-1 p-2 border rounded"
+          placeholder="Say something..."
+        />
+        <button onClick={sendMessage} className="px-4 py-2 bg-green-600 text-white rounded">
+          Send
+        </button>
+      </div>
     </div>
   );
 }
