@@ -85,7 +85,7 @@ export default function Page() {
                                 localStorage.removeItem('jwt');
                                 window.location.reload();
                }}
-               className="px-3 py-1 bg-red-600 text-white rounded"
+               className="px-4 py-2 bg-blue-600 text-white rounded"
             >
                  Logout
             </button>
