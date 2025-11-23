@@ -113,32 +113,32 @@ export default function Page() {
       </div>
 
       {/* INPUT AREA — TEXTAREA (Enter = new line, Ctrl+Enter = send) */}
-      <div className="p-4 border-t bg-white">
-        <div className="flex items-center w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
+      {/* CHATGPT STYLE INPUT BAR WITH AUTO-RESIZE TEXTAREA */}
+<div className="p-4 border-t bg-white">
+  <div className="flex items-center w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
 
-          <textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            onKeyDown={e => {
-              // CTRL + ENTER = send
-              if (e.key === "Enter" && e.ctrlKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            rows={1}
-            className="flex-1 bg-transparent outline-none text-lg resize-none"
-            placeholder="Type your message... (Enter = new line, Ctrl+Enter = send)"
-          />
+    <textarea
+      value={prompt}
+      onChange={(e) => {
+        setPrompt(e.target.value);
+        e.target.style.height = "auto";          // reset height
+        e.target.style.height = e.target.scrollHeight + "px"; // auto-expand
+      }}
+      placeholder="Send a message..."
+      className="flex-1 bg-transparent outline-none text-lg resize-none overflow-hidden leading-6"
+      rows={1}
+    />
 
-          <button
-            onClick={sendMessage}
-            className="ml-3 px-4 py-2 bg-green-600 text-white rounded-full"
-          >
-            Send
-          </button>
-        </div>
-      </div>
+    <button
+      onClick={sendMessage}
+      className="p-2 ml-2 rounded-full hover:bg-gray-200 transition"
+    >
+      Send
+    </button>
+
+  </div>
+</div>
+
 
     </div>
   );
