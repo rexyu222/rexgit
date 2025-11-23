@@ -39,13 +39,17 @@ export default function Page() {
   const sendMessage = async () => {
     if (!prompt.trim()) return;
 
-    const token = localStorage.getItem('jwt'); // MAY be null (guest user)
+    const token = localStorage.getItem('jwt');
+    if (!token) {
+      alert("Please sign in first");
+      return;
+    }
 
     const res = await fetch(`${BACKEND_URL}/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}), // only include if token exists
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ prompt }),
     });
@@ -64,7 +68,7 @@ export default function Page() {
   return (
     <div className="h-screen flex flex-col">
 
-      {/* TOP BAR – login/logout on RIGHT */}
+      {/* TOP BAR */}
       <div className="w-full flex justify-end p-4 border-b">
         {!user ? (
           <button
@@ -93,7 +97,7 @@ export default function Page() {
         )}
       </div>
 
-      {/* CHAT AREA */}
+      {/* CHAT MESSAGES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
@@ -110,7 +114,7 @@ export default function Page() {
         ))}
       </div>
 
-      {/* INPUT AREA (Enter key enabled) */}
+      {/* INPUT BAR (NO ICON) */}
       <div className="p-4 border-t bg-white">
         <div className="flex items-center w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
           <input
@@ -123,7 +127,7 @@ export default function Page() {
 
           <button
             onClick={sendMessage}
-            className="px-4 py-2 rounded-lg hover:bg-gray-200 transition text-sm"
+            className="px-4 py-2 rounded-full hover:bg-gray-300 transition text-sm font-semibold"
           >
             Send
           </button>
