@@ -37,24 +37,26 @@ export default function Page() {
 
   // Send chat message
   const sendMessage = async () => {
-    if (!prompt.trim()) return;
+    const text = prompt.trim();
+    if (!text) return;
 
-    const token = localStorage.getItem('jwt'); // MAY be null (guest user)
+    const token = localStorage.getItem('jwt');
 
     const res = await fetch(`${BACKEND_URL}/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}), // only include if token exists
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt: text }),
     });
 
     const data = await res.json();
 
+    // Add user + bot messages
     setMessages(prev => [
       ...prev,
-      { role: "user", text: prompt },
+      { role: "user", text },
       { role: "bot", text: data.response }
     ]);
 
@@ -64,7 +66,7 @@ export default function Page() {
   return (
     <div className="h-screen flex flex-col">
 
-      {/* TOP BAR – login/logout on RIGHT */}
+      {/* TOP BAR - login/logout in right corner */}
       <div className="w-full flex justify-end p-4 border-b">
         {!user ? (
           <button
@@ -110,20 +112,28 @@ export default function Page() {
         ))}
       </div>
 
-      {/* INPUT AREA (Enter key enabled) */}
+      {/* INPUT AREA — TEXTAREA (Enter = new line, Ctrl+Enter = send) */}
       <div className="p-4 border-t bg-white">
         <div className="flex items-center w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
-          <input
+
+          <textarea
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            placeholder="Send a message..."
-            className="flex-1 bg-transparent outline-none text-lg"
+            onKeyDown={e => {
+              // CTRL + ENTER = send
+              if (e.key === "Enter" && e.ctrlKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            rows={1}
+            className="flex-1 bg-transparent outline-none text-lg resize-none"
+            placeholder="Type your message... (Enter = new line, Ctrl+Enter = send)"
           />
 
           <button
             onClick={sendMessage}
-            className="px-4 py-2 rounded-lg hover:bg-gray-200 transition text-sm"
+            className="ml-3 px-4 py-2 bg-green-600 text-white rounded-full"
           >
             Send
           </button>
