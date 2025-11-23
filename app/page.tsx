@@ -37,6 +37,8 @@ export default function Page() {
 
   // Send chat message
   const sendMessage = async () => {
+    if (!prompt.trim()) return;
+
     const token = localStorage.getItem('jwt');
     if (!token) {
       alert("Please sign in first");
@@ -64,61 +66,74 @@ export default function Page() {
   };
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Login / User display */}
-      {!user ? (
-        <button
-          onClick={() => {
-            window.location.href = `${BACKEND_URL}/auth/login`;
-          }}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
-        >
-          Sign in with Google
-        </button>
-      ) : (
-        <div className="flex items-center gap-4">
+    <div className="h-screen flex flex-col">
+
+      {/* TOP BAR */}
+      <div className="w-full flex justify-end p-4 border-b">
+        {!user ? (
+          <button
+            onClick={() => {
+              window.location.href = `${BACKEND_URL}/auth/login`;
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+          >
+            Sign in with Google
+          </button>
+        ) : (
+          <div className="flex items-center gap-4">
             <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
             <span className="font-semibold">{user.name}</span>
 
             <button
-               onClick={() => {
-                                localStorage.removeItem('jwt');
-                                window.location.reload();
-               }}
-               className="px-4 py-2 bg-blue-600 text-white rounded"
+              onClick={() => {
+                localStorage.removeItem('jwt');
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg"
             >
-                 Logout
+              Logout
             </button>
-        </div>
+          </div>
+        )}
+      </div>
 
-      )}
-
-      {/* Chat messages */}
-      <div className="space-y-2">
+      {/* CHAT MESSAGES */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
-            <span className="inline-block p-2 bg-gray-200 rounded">
+            <div
+              className={`inline-block px-4 py-2 rounded-2xl ${
+                m.role === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-black'
+              }`}
+            >
               {m.text}
-            </span>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Input */}
-      <div className="flex gap-2">
-        <input
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          className="flex-1 p-2 border rounded"
-          placeholder="Say something..."
-        />
-        <button
-          onClick={sendMessage}
-          className="px-4 py-2 bg-green-600 text-white rounded"
-        >
-          Send
-        </button>
+      {/* INPUT BAR (NO ICON) */}
+      <div className="p-4 border-t bg-white">
+        <div className="flex items-center w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
+          <input
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            placeholder="Send a message..."
+            className="flex-1 bg-transparent outline-none text-lg"
+          />
+
+          <button
+            onClick={sendMessage}
+            className="px-4 py-2 rounded-full hover:bg-gray-300 transition text-sm font-semibold"
+          >
+            Send
+          </button>
+        </div>
       </div>
+
     </div>
   );
 }
