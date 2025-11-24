@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 type ChatMessage = {
   role: "user" | "bot";
@@ -17,22 +17,9 @@ export default function Page() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const BACKEND_URL = 'https://proud1776ai.com';
-
-  // Auto-resize textarea
-  const autoResize = () => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = "auto";
-    ta.style.height = ta.scrollHeight + "px";
-  };
-
-  // When prompt changes → resize textarea
-  useEffect(() => {
-    autoResize();
-  }, [prompt]);
 
   // Load user on page load
   useEffect(() => {
@@ -49,6 +36,16 @@ export default function Page() {
       .catch(console.error);
   }, []);
 
+  // Autosize textarea
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, [prompt]);
+
+  // Send chat message
   const sendMessage = async () => {
     if (!prompt.trim()) return;
 
@@ -58,24 +55,26 @@ export default function Page() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({ prompt }),
     });
 
     const data = await res.json();
 
-    // Add both user message + bot message
     setMessages(prev => [
       ...prev,
       { role: "user", text: prompt },
       { role: "bot", text: data.response }
     ]);
 
-    // Reset textarea to one line
     setPrompt('');
-    const ta = textareaRef.current;
-    if (ta) ta.style.height = "40px";
+
+    // Reset textarea to one line
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "40px";
+    }
   };
 
   return (
@@ -94,8 +93,9 @@ export default function Page() {
           </button>
         ) : (
           <div className="flex items-center gap-4">
-            <img src={user.picture} className="w-10 h-10 rounded-full" />
-            <span>{user.name}</span>
+            <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
+            <span className="font-semibold">{user.name}</span>
+
             <button
               onClick={() => {
                 localStorage.removeItem('jwt');
@@ -126,28 +126,28 @@ export default function Page() {
         ))}
       </div>
 
-      {/* INPUT BAR */}
+      {/* INPUT AREA */}
       <div className="p-4 border-t bg-white">
-        <div className="flex items-end bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
+        <div className="flex items-end w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
 
           <textarea
             ref={textareaRef}
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
-            placeholder="Type your message..."
+            placeholder="Send a message..."
             className="flex-1 bg-transparent outline-none text-lg resize-none overflow-hidden"
-            style={{ height: "40px" }}
+            rows={1}
           />
 
           <button
             onClick={sendMessage}
-            className="ml-3 px-4 py-2 bg-green-600 text-white rounded-2xl"
+            className="ml-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
           >
             Send
           </button>
-
         </div>
       </div>
+
     </div>
   );
 }
