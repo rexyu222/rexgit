@@ -65,7 +65,7 @@ export default function Page() {
     setMessages(prev => [
       ...prev,
       { role: "user", text: prompt },
-      { role: "bot", text: data.reply }
+      { role: "bot", text: data.response }
     ]);
 
     setPrompt('');
