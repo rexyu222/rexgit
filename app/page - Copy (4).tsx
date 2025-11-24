@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 
 type ChatMessage = {
   role: "user" | "bot";
@@ -18,21 +18,7 @@ export default function Page() {
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const BACKEND_URL = 'https://proud1776ai.com';
-
-  // Auto-resize textarea
-  const autoResize = () => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = "auto";
-    ta.style.height = ta.scrollHeight + "px";
-  };
-
-  // When prompt changes → resize textarea
-  useEffect(() => {
-    autoResize();
-  }, [prompt]);
 
   // Load user on page load
   useEffect(() => {
@@ -49,8 +35,10 @@ export default function Page() {
       .catch(console.error);
   }, []);
 
+  // Send chat message
   const sendMessage = async () => {
-    if (!prompt.trim()) return;
+    const text = prompt.trim();
+    if (!text) return;
 
     const token = localStorage.getItem('jwt');
 
@@ -60,28 +48,25 @@ export default function Page() {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt: text }),
     });
 
     const data = await res.json();
 
-    // Add both user message + bot message
+    // Add user + bot messages
     setMessages(prev => [
       ...prev,
-      { role: "user", text: prompt },
+      { role: "user", text },
       { role: "bot", text: data.response }
     ]);
 
-    // Reset textarea to one line
     setPrompt('');
-    const ta = textareaRef.current;
-    if (ta) ta.style.height = "40px";
   };
 
   return (
     <div className="h-screen flex flex-col">
 
-      {/* TOP BAR */}
+      {/* TOP BAR - login/logout in right corner */}
       <div className="w-full flex justify-end p-4 border-b">
         {!user ? (
           <button
@@ -94,8 +79,9 @@ export default function Page() {
           </button>
         ) : (
           <div className="flex items-center gap-4">
-            <img src={user.picture} className="w-10 h-10 rounded-full" />
-            <span>{user.name}</span>
+            <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
+            <span className="font-semibold">{user.name}</span>
+
             <button
               onClick={() => {
                 localStorage.removeItem('jwt');
@@ -114,7 +100,7 @@ export default function Page() {
         {messages.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
             <div
-              className={`inline-block px-4 py-2 rounded-2xl whitespace-pre-wrap ${
+              className={`inline-block px-4 py-2 rounded-2xl ${
                 m.role === 'user'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-black'
@@ -126,28 +112,69 @@ export default function Page() {
         ))}
       </div>
 
-      {/* INPUT BAR */}
+      {/* INPUT AREA — TEXTAREA (Enter = new line, Ctrl+Enter = send) */}
+      {/* CHATGPT STYLE INPUT BAR WITH AUTO-RESIZE TEXTAREA */}
+      {/* CHATGPT STYLE INPUT BAR (BOTTOM FIXED) */}
       <div className="p-4 border-t bg-white">
-        <div className="flex items-end bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
+        <div className="flex items-center w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
 
           <textarea
-            ref={textareaRef}
             value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            placeholder="Type your message..."
+            onChange={e => {
+              setPrompt(e.target.value);
+
+              // Auto expand textarea
+              e.target.style.height = "auto";
+              e.target.style.height = e.target.scrollHeight + "px";
+            }}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                // Enter alone = new line
+                e.preventDefault();
+                const start = e.currentTarget.selectionStart;
+                const end = e.currentTarget.selectionEnd;
+
+                const newValue =
+                  prompt.substring(0, start) + "\n" + prompt.substring(end);
+
+                setPrompt(newValue);
+
+                setTimeout(() => {
+                  e.currentTarget.selectionStart = e.currentTarget.selectionEnd =
+                    start + 1;
+                }, 0);
+              }
+
+              if (e.key === "Enter" && e.shiftKey) {
+                // Shift+Enter = send
+                e.preventDefault();
+                sendMessage();
+
+                // Reset height after sending
+                e.currentTarget.style.height = "40px";
+              }
+            }}
+            placeholder="Send a message..."
             className="flex-1 bg-transparent outline-none text-lg resize-none overflow-hidden"
+            rows={1}
             style={{ height: "40px" }}
           />
 
           <button
-            onClick={sendMessage}
-            className="ml-3 px-4 py-2 bg-green-600 text-white rounded-2xl"
+            onClick={() => {
+              sendMessage();
+              const textarea = document.querySelector("textarea");
+              if (textarea) textarea.style.height = "40px";
+            }}
+            className="p-2 rounded-full hover:bg-gray-200 transition"
           >
             Send
           </button>
-
         </div>
       </div>
+
+
+
     </div>
   );
 }
