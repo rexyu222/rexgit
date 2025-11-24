@@ -49,13 +49,12 @@ export default function Page() {
   const sendMessage = async () => {
     if (!prompt.trim()) return;
 
-    const token = localStorage.getItem('jwt');
+   
 
     const res = await fetch(`${BACKEND_URL}/chat`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({ prompt }),
     });
