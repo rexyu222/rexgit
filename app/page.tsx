@@ -114,30 +114,65 @@ export default function Page() {
 
       {/* INPUT AREA — TEXTAREA (Enter = new line, Ctrl+Enter = send) */}
       {/* CHATGPT STYLE INPUT BAR WITH AUTO-RESIZE TEXTAREA */}
-<div className="p-4 border-t bg-white">
-  <div className="flex items-center w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
+      {/* CHATGPT STYLE INPUT BAR (BOTTOM FIXED) */}
+      <div className="p-4 border-t bg-white">
+        <div className="flex items-center w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
 
-    <textarea
-      value={prompt}
-      onChange={(e) => {
-        setPrompt(e.target.value);
-        e.target.style.height = "auto";          // reset height
-        e.target.style.height = e.target.scrollHeight + "px"; // auto-expand
-      }}
-      placeholder="Send a message..."
-      className="flex-1 bg-transparent outline-none text-lg resize-none overflow-hidden leading-6"
-      rows={1}
-    />
+          <textarea
+            value={prompt}
+            onChange={e => {
+              setPrompt(e.target.value);
 
-    <button
-      onClick={sendMessage}
-      className="p-2 ml-2 rounded-full hover:bg-gray-200 transition"
-    >
-      Send
-    </button>
+              // Auto expand textarea
+              e.target.style.height = "auto";
+              e.target.style.height = e.target.scrollHeight + "px";
+            }}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                // Enter alone = new line
+                e.preventDefault();
+                const start = e.currentTarget.selectionStart;
+                const end = e.currentTarget.selectionEnd;
 
-  </div>
-</div>
+                const newValue =
+                  prompt.substring(0, start) + "\n" + prompt.substring(end);
+
+                setPrompt(newValue);
+
+                setTimeout(() => {
+                  e.currentTarget.selectionStart = e.currentTarget.selectionEnd =
+                    start + 1;
+                }, 0);
+              }
+
+              if (e.key === "Enter" && e.shiftKey) {
+                // Shift+Enter = send
+                e.preventDefault();
+                sendMessage();
+
+                // Reset height after sending
+                e.currentTarget.style.height = "40px";
+              }
+            }}
+            placeholder="Send a message..."
+            className="flex-1 bg-transparent outline-none text-lg resize-none overflow-hidden"
+            rows={1}
+            style={{ height: "40px" }}
+          />
+
+          <button
+            onClick={() => {
+              sendMessage();
+              const textarea = document.querySelector("textarea");
+              if (textarea) textarea.style.height = "40px";
+            }}
+            className="p-2 rounded-full hover:bg-gray-200 transition"
+          >
+            Send
+          </button>
+        </div>
+      </div>
+
 
 
     </div>
