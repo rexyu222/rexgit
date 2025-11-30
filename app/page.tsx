@@ -14,25 +14,32 @@ type UserInfo = {
 };
 
 /**
- * Removes:
- * 1) Inline video tags like [VIDEO1 - 0:03:06.440]
- * 2) Everything from "Sources:" to the end of the message
+ * Cleans bot text when "Hide info" is active by:
+ * 1) Removing inline brackets:
+ *    - [VIDEO1 - 0:03:06.440]
+ *    - [Source: VIDEO1, 0:03:06.440 - 0:04:04.520]
+ *    - [Sources: VIDEO1, 0:04:34.160 - ...]
+ * 2) Removing everything from "Sources:" or "**Sources:**" to the end.
  */
 function cleanBotText(text: string) {
-  // Remove video references
-  let cleaned = text.replace(/\[VIDEO\d+\s*-\s*[^\]]+\]/g, '');
+  let cleaned = text;
 
-  // Remove "Sources:" section completely
+  // ✅ Remove ANY square-bracket citation blocks
+  // [VIDEO1 ...], [Source: ...], [Sources: ...]
+  cleaned = cleaned.replace(/\[[^\]]*\]/g, '');
+
+  // ✅ Remove "Sources:" or "**Sources:**" sections entirely (to the end)
+  cleaned = cleaned.replace(/\n\s*\*\*Sources:\*\*\s*[\s\S]*$/i, '');
   cleaned = cleaned.replace(/\n\s*Sources:\s*[\s\S]*$/i, '');
 
-  // Remove "**Sources:**" markdown form too
-  cleaned = cleaned.replace(/\n\s*\*\*Sources:\*\*\s*[\s\S]*$/i, '');
+  // ✅ Normalize spacing
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
 
-  return cleaned.trim();
+  return cleaned;
 }
 
 /**
- * Message component with hide/show button
+ * Bot message renderer with show/hide toggle button
  */
 function BotMessage({ text }: { text: string }) {
   const [showInfo, setShowInfo] = useState(true);
@@ -43,14 +50,12 @@ function BotMessage({ text }: { text: string }) {
     <div className="relative inline-block px-4 py-2 rounded-2xl bg-gray-200 text-black whitespace-pre-wrap">
 
       {/* MESSAGE BODY */}
-      <div>
-        {displayText}
-      </div>
+      <div>{displayText}</div>
 
       {/* TOGGLE BUTTON */}
       <button
-        className="absolute bottom-1 right-1 text-xs px-2 py-1 rounded-md bg-black text-white opacity-70 hover:opacity-100"
         onClick={() => setShowInfo(v => !v)}
+        className="absolute bottom-1 right-1 text-xs px-2 py-1 rounded-md bg-black text-white opacity-70 hover:opacity-100"
       >
         {showInfo ? "Hide info" : "Show info"}
       </button>
@@ -113,7 +118,7 @@ export default function Page() {
 
     setPrompt('');
 
-    // Reset textarea to one line
+    // Reset textarea
     const el = textareaRef.current;
     if (el) {
       el.style.height = "40px";
@@ -186,6 +191,7 @@ export default function Page() {
           >
             Send
           </button>
+
         </div>
       </div>
 
