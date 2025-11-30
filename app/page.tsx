@@ -14,77 +14,47 @@ type UserInfo = {
 };
 
 /**
- * Utility:
- * Split text into normal text + bracket parts "(...)"
+ * Removes:
+ * 1) Inline video tags like [VIDEO1 - 0:03:06.440]
+ * 2) Everything from "Sources:" to the end of the message
  */
-function parseParentheses(text: string) {
-  const regex = /\(([^)]+)\)/g;
-  const parts: { type: "text" | "paren"; value: string }[] = [];
+function cleanBotText(text: string) {
+  // Remove video references
+  let cleaned = text.replace(/\[VIDEO\d+\s*-\s*[^\]]+\]/g, '');
 
-  let lastIndex = 0;
-  let match;
+  // Remove "Sources:" section completely
+  cleaned = cleaned.replace(/\n\s*Sources:\s*[\s\S]*$/i, '');
 
-  while ((match = regex.exec(text)) !== null) {
-    // Text before "("
-    if (match.index > lastIndex) {
-      parts.push({
-        type: "text",
-        value: text.slice(lastIndex, match.index),
-      });
-    }
+  // Remove "**Sources:**" markdown form too
+  cleaned = cleaned.replace(/\n\s*\*\*Sources:\*\*\s*[\s\S]*$/i, '');
 
-    // The "(...)"
-    parts.push({
-      type: "paren",
-      value: match[0],
-    });
-
-    lastIndex = regex.lastIndex;
-  }
-
-  // Remaining text after last ")"
-  if (lastIndex < text.length) {
-    parts.push({
-      type: "text",
-      value: text.slice(lastIndex),
-    });
-  }
-
-  return parts;
+  return cleaned.trim();
 }
 
 /**
- * Bot message with toggleable parentheses
+ * Message component with hide/show button
  */
 function BotMessage({ text }: { text: string }) {
-  const [showDetails, setShowDetails] = useState(false);
-  const parts = parseParentheses(text);
+  const [showInfo, setShowInfo] = useState(true);
+
+  const displayText = showInfo ? text : cleanBotText(text);
 
   return (
     <div className="relative inline-block px-4 py-2 rounded-2xl bg-gray-200 text-black whitespace-pre-wrap">
 
       {/* MESSAGE BODY */}
-      <span>
-        {parts.map((p, idx) =>
-          p.type === "text" ? (
-            <span key={idx}>{p.value}</span>
-          ) : showDetails ? (
-            <span key={idx} className="text-gray-600">
-              {p.value}
-            </span>
-          ) : null
-        )}
-      </span>
+      <div>
+        {displayText}
+      </div>
 
       {/* TOGGLE BUTTON */}
-      {parts.some(p => p.type === "paren") && (
-        <button
-          className="absolute bottom-1 right-1 text-xs px-2 py-1 rounded-md bg-black text-white opacity-70 hover:opacity-100"
-          onClick={() => setShowDetails(v => !v)}
-        >
-          {showDetails ? "Hide info" : "Show info"}
-        </button>
-      )}
+      <button
+        className="absolute bottom-1 right-1 text-xs px-2 py-1 rounded-md bg-black text-white opacity-70 hover:opacity-100"
+        onClick={() => setShowInfo(v => !v)}
+      >
+        {showInfo ? "Hide info" : "Show info"}
+      </button>
+
     </div>
   );
 }
@@ -143,7 +113,7 @@ export default function Page() {
 
     setPrompt('');
 
-    // Reset textarea size
+    // Reset textarea to one line
     const el = textareaRef.current;
     if (el) {
       el.style.height = "40px";
@@ -200,6 +170,7 @@ export default function Page() {
       {/* INPUT AREA */}
       <div className="p-4 border-t bg-white">
         <div className="flex items-end w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
+
           <textarea
             ref={textareaRef}
             value={prompt}
