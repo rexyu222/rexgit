@@ -13,53 +13,111 @@ type UserInfo = {
   picture: string;
 };
 
+const VIDEO_URLS: Record<string, string> = {
+  Video1: "https://www.youtube.com/watch?v=v6gxmBerTeM",
+  Video2: "https://www.youtube.com/watch?v=DDLR5gk6JIE",
+};
+
 /**
- * Cleans bot text when "Hide info" is active by:
- * 1) Removing inline brackets:
- *    - [VIDEO1 - 0:03:06.440]
- *    - [Source: VIDEO1, 0:03:06.440 - 0:04:04.520]
- *    - [Sources: VIDEO1, 0:04:34.160 - ...]
- * 2) Removing everything from "Sources:" or "**Sources:**" to the end.
+ * Parses [Video1, 0:03:06.440] → clickable <a> that opens YouTube at that time
+ */
+function parseCitations(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /\[([Video1|Video2]+),\s*(\d{1,2}:\d{2}:\d{2}\.\d{3})\]/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    const [fullMatch, videoKey, timestamp] = match;
+    const index = match.index;
+
+    // Text before the citation
+    if (index > lastIndex) {
+      parts.push(text.slice(lastIndex, index));
+    }
+
+    // Convert timestamp 0:03:06.440 → seconds
+    const timeParts = timestamp.split(':');
+    const seconds =
+      parseInt(timeParts[0]) * 3600 +
+      parseInt(timeParts[1]) * 60 +
+      parseFloat(timeParts[2]);
+
+    const url = `${VIDEO_URLS[videoKey]}?t=${Math.floor(seconds)}`;
+
+    parts.push(
+      <a
+        key={index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-block px-2 py-0.5 mx-0.5 text-xs font-medium text-blue-600 bg-blue-100 rounded hover:bg-blue-200 underline"
+        onClick={(e) => {
+          e.stopPropagation(); // prevent chat bubble click issues
+          window.open(url, '_blank');
+        }}
+      >
+        {fullMatch}
+      </a>
+    );
+
+    lastIndex = index + fullMatch.length;
+  }
+
+  // Remaining text after last match
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
+
+/**
+ * Cleans bot text when "Hide info" is active
  */
 function cleanBotText(text: string) {
   let cleaned = text;
 
-  // ✅ Remove ANY square-bracket citation blocks
-  // [VIDEO1 ...], [Source: ...], [Sources: ...]
-  cleaned = cleaned.replace(/\[[^\]]*\]/g, '');
+  // Remove all [Video1, ...], [Video2, ...] citations
+  cleaned = cleaned.replace(/\[[Video1|Video2]+,?\s*\d{1,2}:\d{2}:\d{2}\.\d{3}\]/g, '');
 
-  // ✅ Remove "Sources:" or "**Sources:**" sections entirely (to the end)
-  cleaned = cleaned.replace(/\n\s*\*\*Sources:\*\*\s*[\s\S]*$/i, '');
-  cleaned = cleaned.replace(/\n\s*Sources:\s*[\s\S]*$/i, '');
+  // Remove Sources block at the end
+  cleaned = cleaned.replace(/\n\s*\*\*Sources:\*\*[\s\S]*/i, '');
+  cleaned = cleaned.replace(/\n\s*Sources:[\s\S]*/i, '');
 
-  // ✅ Normalize spacing
+  // Clean up extra spaces
   cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
 
   return cleaned;
 }
 
 /**
- * Bot message renderer with show/hide toggle button
- */
+ * Bot message with clickable timestamps + show/hide */
 function BotMessage({ text }: { text: string }) {
   const [showInfo, setShowInfo] = useState(true);
-
   const displayText = showInfo ? text : cleanBotText(text);
 
+  // Split by lines to preserve <br/> or paragraphs
+  const lines = displayText.split('\n');
+
   return (
-    <div className="relative inline-block px-4 py-2 rounded-2xl bg-gray-200 text-black whitespace-pre-wrap">
+    <div className="relative inline-block max-w-full px-4 py-3 rounded-2xl bg-gray-200 text-black whitespace-pre-wrap break-words">
+      <div className="space-y-2">
+        {lines.map((line, i) => (
+          <div key={i}>
+            {parseCitations(line)}
+            {i < lines.length - 1 && <br />}
+          </div>
+        ))}
+      </div>
 
-      {/* MESSAGE BODY */}
-      <div>{displayText}</div>
-
-      {/* TOGGLE BUTTON */}
+      {/* Toggle button */}
       <button
         onClick={() => setShowInfo(v => !v)}
-        className="absolute bottom-1 right-1 text-xs px-2 py-1 rounded-md bg-black text-white opacity-70 hover:opacity-100"
+        className="absolute bottom-1 right-2 text-xs px-2 py-1 rounded bg-black text-white opacity-70 hover:opacity-100 transition"
       >
         {showInfo ? "Hide info" : "Show info"}
       </button>
-
     </div>
   );
 }
@@ -72,7 +130,7 @@ export default function Page() {
 
   const BACKEND_URL = 'https://proud1776ai.com';
 
-  // Load user on page load
+  // Load user
   useEffect(() => {
     const token = localStorage.getItem('jwt');
     if (!token) return;
@@ -92,19 +150,17 @@ export default function Page() {
     const el = textareaRef.current;
     if (el) {
       el.style.height = "auto";
-      el.style.height = el.scrollHeight + "px";
+      el.style.height = `${el.scrollHeight}px`;
     }
   }, [prompt]);
 
-  // Send chat message
+  // Send message
   const sendMessage = async () => {
     if (!prompt.trim()) return;
 
     const res = await fetch(`${BACKEND_URL}/chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
     });
 
@@ -117,25 +173,20 @@ export default function Page() {
     ]);
 
     setPrompt('');
-
-    // Reset textarea
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = "40px";
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "40px";
     }
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-gray-50">
 
       {/* TOP BAR */}
-      <div className="w-full flex justify-end p-4 border-b">
+      <div className="w-full flex justify-end p-4 border-b bg-white">
         {!user ? (
           <button
-            onClick={() => {
-              window.location.href = `${BACKEND_URL}/auth/login`;
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+            onClick={() => { window.location.href = `${BACKEND_URL}/auth/login`; }}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Sign in with Google
           </button>
@@ -143,13 +194,12 @@ export default function Page() {
           <div className="flex items-center gap-4">
             <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
             <span className="font-semibold">{user.name}</span>
-
             <button
               onClick={() => {
                 localStorage.removeItem('jwt');
                 window.location.reload();
               }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg"
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               Logout
             </button>
@@ -157,14 +207,14 @@ export default function Page() {
         )}
       </div>
 
-      {/* CHAT AREA */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/* CHAT MESSAGES */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
             {m.role === 'bot' ? (
               <BotMessage text={m.text} />
             ) : (
-              <div className="inline-block px-4 py-2 rounded-2xl whitespace-pre-wrap bg-blue-600 text-white">
+              <div className="inline-block px-5 py-3 rounded-2xl bg-blue-600 text-white max-w-lg whitespace-pre-wrap">
                 {m.text}
               </div>
             )}
@@ -172,29 +222,31 @@ export default function Page() {
         ))}
       </div>
 
-      {/* INPUT AREA */}
+      {/* INPUT */}
       <div className="p-4 border-t bg-white">
-        <div className="flex items-end w-full bg-gray-100 rounded-3xl px-4 py-2 shadow-sm">
-
+        <div className="flex items-end w-full bg-gray-100 rounded-3xl px-4 py-3 shadow-sm">
           <textarea
             ref={textareaRef}
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
-            placeholder="Send a message..."
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="Ask about jogging or running..."
             className="flex-1 bg-transparent outline-none text-lg resize-none overflow-hidden"
             rows={1}
           />
-
           <button
             onClick={sendMessage}
-            className="ml-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
+            className="ml-3 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition"
           >
             Send
           </button>
-
         </div>
       </div>
-
     </div>
   );
 }
