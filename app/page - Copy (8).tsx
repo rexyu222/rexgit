@@ -18,7 +18,9 @@ const VIDEO_URLS: Record<string, string> = {
   Video2: "https://www.youtube.com/watch?v=DDLR5gk6JIE",
 };
 
-/* === 1. Inline timestamp citations [Video1, 0:03:06.440] === */
+/**
+ * Parses [Video1, 0:03:06.440] → clickable timestamp link
+ */
 function parseTimestampCitations(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex = /\[([Video1|Video2]+),\s*(\d{1,2}:\d{2}:\d{2}\.\d{3})\]/g;
@@ -29,10 +31,18 @@ function parseTimestampCitations(text: string): React.ReactNode[] {
     const [fullMatch, videoKey, timestamp] = match;
     const index = match.index;
 
-    if (index > lastIndex) parts.push(text.slice(lastIndex, index));
+    if (index > lastIndex) {
+      parts.push(text.slice(lastIndex, index));
+    }
 
-    const [h, m, s] = timestamp.split(':').map(parseFloat);
-    const seconds = h * 3600 + m * 60 + s;
+    const timeParts = timestamp.split(':');
+    let seconds = 0;
+    if (timeParts.length === 3) {
+      seconds = parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseFloat(timeParts[2]);
+    } else if (timeParts.length === 2) {
+      seconds = parseInt(timeParts[0]) * 60 + parseFloat(timeParts[1]);
+    }
+
     const url = `${VIDEO_URLS[videoKey]}?t=${Math.floor(seconds)}`;
 
     parts.push(
@@ -54,26 +64,30 @@ function parseTimestampCitations(text: string): React.ReactNode[] {
     lastIndex = index + fullMatch.length;
   }
 
-  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
   return parts.length > 0 ? parts : [text];
 }
 
-/* === 2. Full source lines in **Sources:** block === */
+/**
+ * Makes the **Sources** block clickable (full video from start)
+ */
 function parseSourcesBlock(text: string): React.ReactNode {
   const lines = text.split('\n');
   return lines.map((line, i) => {
     const trimmed = line.trim();
 
-    // Match: - [VIDEO1] Title https://www.youtube.com/watch?v=...
-    const match = trimmed.match(/-\s*\[VIDEO([12])\]\s+(.+?)\s+https?:\/\/[^\s]+/i);
-    if (match) {
-      const videoNum = match[1];
-      const title = match[2].trim();
+    // Match lines like: - [VIDEO1] Title https://...
+    const sourceMatch = trimmed.match(/-\s*\[VIDEO([12])\]\s+(.+?)\s+https?:\/\/(www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/i);
+    if (sourceMatch) {
+      const videoNum = sourceMatch[1]; // "1" or "2"
       const videoKey = `Video${videoNum}`;
       const url = VIDEO_URLS[videoKey];
 
       return (
-        <div key={i} className="my-1">
+        <div key={i}>
           -{' '}
           <a
             href={url}
@@ -85,18 +99,34 @@ function parseSourcesBlock(text: string): React.ReactNode {
               window.open(url, '_blank');
             }}
           >
-            [VIDEO{videoNum}] {title}
-          </a>
+            [{`VIDEO${videoNum}`}] {sourceMatch[2]}
+          </a>{' '}
+          <span className="text-gray-600">{url}</span>
         </div>
       );
     }
 
-    // **Sources:** header
-    if (trimmed.match(/\*\*Sources:\*\*/i)) {
-      return <div key={i} className="font-bold mt-4 mb-1">{line}</div>;
+    return <div key={i}>{parseTimestampCitations(line)}</div>;
+  });
+}
+
+/**
+ * Main text parser: handles both timestamp citations AND source links
+ */
+function parseBotText(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    const trimmed = line.trim();
+
+    // If it's a source line → use special parser
+    if (trimmed.startsWith('- [VIDEO') || trimmed.includes('**Sources:**')) {
+      if (trimmed.includes('**Sources:**')) {
+        return <div key={i} className="font-bold mt-3 mb-1">{line}</div>;
+      }
+      return <div key={i}>{parseSourcesBlock(line)}</div>;
     }
 
-    // Fallback: normal line (may contain timestamps)
+    // Regular line with possible inline citations
     return (
       <div key={i}>
         {parseTimestampCitations(line)}
@@ -106,42 +136,25 @@ function parseSourcesBlock(text: string): React.ReactNode {
   });
 }
 
-/* === 3. Main parser – decides what to apply per line === */
-function parseBotText(text: string): React.ReactNode {
-  const lines = text.split('\n');
-  const result: React.ReactNode[] = [];
-
-  lines.forEach((line, i) => {
-    const trimmed = line.trim();
-
-    // Detect source lines
-    if (trimmed.startsWith('- [VIDEO') || trimmed.includes('**Sources:**')) {
-      result.push(<div key={i}>{parseSourcesBlock(line)}</div>);
-    } else {
-      result.push(
-        <div key={i}>
-          {parseTimestampCitations(line)}
-          {i < lines.length - 1 && <br />}
-        </div>
-      );
-    }
-  });
-
-  return result;
-}
-
-/* === 4. Clean text for "Hide info" === */
+/**
+ * Clean text when "Hide info" is clicked
+ */
 function cleanBotText(text: string): string {
-  let cleaned = text
-    .replace(/\[[Video1|Video2]+,\s*\d{1,2}:\d{2}:\d{2}\.\d{3}\]/g, '') // timestamps
-    .replace(/\n?\s*\*\*Sources:\*\*[\s\S]*/i, '') // entire sources block
-    .replace(/\s{2,}/g, ' ')
-    .trim();
+  let cleaned = text;
 
-  return cleaned;
+  // Remove inline citations
+  cleaned = cleaned.replace(/\[[Video1|Video2]+,\s*\d{1,2}:\d{2}:\d{2}\.\d{3}\]/g, '');
+
+  // Remove entire Sources block
+  cleaned = cleaned.replace(/\n?\s*\*\*Sources:\*\*[\s\S]*/i, '');
+  cleaned = cleaned.replace(/\n?\s*Sources:[\s\S]*/i, '');
+
+  return cleaned.replace(/\s{2,}/g, ' ').trim();
 }
 
-/* === Bot Message Component === */
+/**
+ * Bot message component
+ */
 function BotMessage({ text }: { text: string }) {
   const [showInfo, setShowInfo] = useState(true);
   const displayText = showInfo ? text : cleanBotText(text);
@@ -162,58 +175,80 @@ function BotMessage({ text }: { text: string }) {
   );
 }
 
-/* === Main Page === */
 export default function Page() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const BACKEND_URL = 'https://proud1776ai.com';
 
   useEffect(() => {
     const token = localStorage.getItem('jwt');
     if (!token) return;
-    fetch(`${BACKEND_URL}/api/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => d.email && setUser(d))
+
+    fetch(`${BACKEND_URL}/api/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.email) setUser(data);
+      })
       .catch(console.error);
   }, []);
 
   useEffect(() => {
     const el = textareaRef.current;
     if (el) {
-      el.style.height = 'auto';
+      el.style.height = "auto";
       el.style.height = `${el.scrollHeight}px`;
     }
   }, [prompt]);
 
   const sendMessage = async () => {
     if (!prompt.trim()) return;
+
     const res = await fetch(`${BACKEND_URL}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
     });
+
     const data = await res.json();
 
-    setMessages(prev => [...prev, { role: 'user', text: prompt }, { role: 'bot', text: data.reply }]);
+    setMessages(prev => [
+      ...prev,
+      { role: "user", text: prompt },
+      { role: "bot", text: data.reply }
+    ]);
+
     setPrompt('');
-    if (textareaRef.current) textareaRef.current.style.height = '40px';
+    if (textareaRef.current) textareaRef.current.style.height = "40px";
   };
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
+
       {/* TOP BAR */}
       <div className="w-full flex justify-end p-4 border-b bg-white">
         {!user ? (
-          <button onClick={() => { window.location.href = `${BACKEND_URL}/auth/login`; }} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={() => { window.location.href = `${BACKEND_URL}/auth/login`; }}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             Sign in with Google
           </button>
         ) : (
           <div className="flex items-center gap-4">
             <img src={user.picture} alt="avatar" className="w-10 h-10 rounded-full" />
             <span className="font-semibold">{user.name}</span>
-            <button onClick={() => { localStorage.removeItem('jwt'); window.location.reload(); }} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <button
+              onClick={() => {
+                localStorage.removeItem('jwt');
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
               Logout
             </button>
           </div>
@@ -224,7 +259,9 @@ export default function Page() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
-            {m.role === 'bot' ? <BotMessage text={m.text} /> : (
+            {m.role === 'bot' ? (
+              <BotMessage text={m.text} />
+            ) : (
               <div className="inline-block px-5 py-3 rounded-2xl bg-blue-600 text-white max-w-lg whitespace-pre-wrap">
                 {m.text}
               </div>
@@ -240,12 +277,20 @@ export default function Page() {
             ref={textareaRef}
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
             placeholder="Ask about jogging or running..."
             className="flex-1 bg-transparent outline-none text-lg resize-none overflow-hidden"
             rows={1}
           />
-          <button onClick={sendMessage} className="ml-3 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition">
+          <button
+            onClick={sendMessage}
+            className="ml-3 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition"
+          >
             Send
           </button>
         </div>
