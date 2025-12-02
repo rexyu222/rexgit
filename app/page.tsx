@@ -58,90 +58,76 @@ function parseTimestampCitations(text: string): React.ReactNode[] {
   return parts.length > 0 ? parts : [text];
 }
 
-/* === 2. Full source lines in **Sources:** block === */
-function parseSourcesBlock(text: string): React.ReactNode {
-  const lines = text.split('\n');
-  return lines.map((line, i) => {
+/* === 2. Make ENTIRE source line clickable (including URL) === */
+function parseSourceLine(line: string): React.ReactNode {
+  const trimmed = line.trim();
+
+  // Match: - [VIDEO1] Title https://www.youtube.com/watch?v=...
+  const match = trimmed.match(/-\s*\[VIDEO([12])\]\s+(.+?)\s+(https?:\/\/[^\s]+)/i);
+  if (!match) {
+    // Not a source line → just return with possible timestamps
+    return parseTimestampCitations(line);
+  }
+
+  const videoNum = match[1];
+  const titleAndUrl = match[2] + ' ' + match[3]; // full visible text after "- [VIDEOx]"
+  const videoKey = `Video${videoNum}`;
+  const url = VIDEO_URLS[videoKey];
+
+  return (
+    <span>
+      -{' '}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 underline hover:text-blue-800 font-medium"
+        onClick={(e) => {
+          e.stopPropagation();
+          window.open(url, '_blank');
+        }}
+      >
+        [VIDEO{videoNum}] {titleAndUrl}
+      </a>
+    </span>
+  );
+}
+
+/* === 3. Main text parser === */
+function parseBotText(text: string): React.ReactNode {
+  return text.split('\n').map((line, i) => {
     const trimmed = line.trim();
-
-    // Match: - [VIDEO1] Title https://www.youtube.com/watch?v=...
-    const match = trimmed.match(/-\s*\[VIDEO([12])\]\s+(.+?)\s+https?:\/\/[^\s]+/i);
-    if (match) {
-      const videoNum = match[1];
-      const title = match[2].trim();
-      const videoKey = `Video${videoNum}`;
-      const url = VIDEO_URLS[videoKey];
-
-      return (
-        <div key={i} className="my-1">
-          -{' '}
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 underline hover:text-blue-800 font-medium"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(url, '_blank');
-            }}
-          >
-            [VIDEO{videoNum}] {title}
-          </a>
-        </div>
-      );
-    }
 
     // **Sources:** header
     if (trimmed.match(/\*\*Sources:\*\*/i)) {
       return <div key={i} className="font-bold mt-4 mb-1">{line}</div>;
     }
 
-    // Fallback: normal line (may contain timestamps)
+    // Source line: - [VIDEO1] ...
+    if (trimmed.startsWith('- [VIDEO')) {
+      return <div key={i}>{parseSourceLine(line)}</div>;
+    }
+
+    // Normal line (with possible timestamps)
     return (
       <div key={i}>
         {parseTimestampCitations(line)}
-        {i < lines.length - 1 && <br />}
+        {i < text.split('\n').length - 1 && <br />}
       </div>
     );
   });
 }
 
-/* === 3. Main parser – decides what to apply per line === */
-function parseBotText(text: string): React.ReactNode {
-  const lines = text.split('\n');
-  const result: React.ReactNode[] = [];
-
-  lines.forEach((line, i) => {
-    const trimmed = line.trim();
-
-    // Detect source lines
-    if (trimmed.startsWith('- [VIDEO') || trimmed.includes('**Sources:**')) {
-      result.push(<div key={i}>{parseSourcesBlock(line)}</div>);
-    } else {
-      result.push(
-        <div key={i}>
-          {parseTimestampCitations(line)}
-          {i < lines.length - 1 && <br />}
-        </div>
-      );
-    }
-  });
-
-  return result;
-}
-
 /* === 4. Clean text for "Hide info" === */
 function cleanBotText(text: string): string {
-  let cleaned = text
-    .replace(/\[[Video1|Video2]+,\s*\d{1,2}:\d{2}:\d{2}\.\d{3}\]/g, '') // timestamps
-    .replace(/\n?\s*\*\*Sources:\*\*[\s\S]*/i, '') // entire sources block
+  return text
+    .replace(/\[[Video1|Video2]+,\s*\d{1,2}:\d{2}:\d{2}\.\d{3}\]/g, '')
+    .replace(/\n?\s*\*\*Sources:\*\*[\s\S]*/i, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
-
-  return cleaned;
 }
 
-/* === Bot Message Component === */
+/* === Bot Message === */
 function BotMessage({ text }: { text: string }) {
   const [showInfo, setShowInfo] = useState(true);
   const displayText = showInfo ? text : cleanBotText(text);
@@ -162,7 +148,7 @@ function BotMessage({ text }: { text: string }) {
   );
 }
 
-/* === Main Page === */
+/* === Page Component === */
 export default function Page() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [prompt, setPrompt] = useState('');
@@ -175,8 +161,7 @@ export default function Page() {
     if (!token) return;
     fetch(`${BACKEND_URL}/api/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => d.email && setUser(d))
-      .catch(console.error);
+      .then(d => d.email && setUser(d));
   }, []);
 
   useEffect(() => {
@@ -203,7 +188,6 @@ export default function Page() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* TOP BAR */}
       <div className="w-full flex justify-end p-4 border-b bg-white">
         {!user ? (
           <button onClick={() => { window.location.href = `${BACKEND_URL}/auth/login`; }} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
@@ -220,7 +204,6 @@ export default function Page() {
         )}
       </div>
 
-      {/* MESSAGES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
@@ -233,7 +216,6 @@ export default function Page() {
         ))}
       </div>
 
-      {/* INPUT */}
       <div className="p-4 border-t bg-white">
         <div className="flex items-end w-full bg-gray-100 rounded-3xl px-4 py-3 shadow-sm">
           <textarea
