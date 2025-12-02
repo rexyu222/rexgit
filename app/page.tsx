@@ -19,9 +19,9 @@ const VIDEO_URLS: Record<string, string> = {
 };
 
 /**
- * Parses [Video1, 0:03:06.440] → clickable <a> that opens YouTube at that time
+ * Parses [Video1, 0:03:06.440] → clickable timestamp link
  */
-function parseCitations(text: string): React.ReactNode[] {
+function parseTimestampCitations(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex = /\[([Video1|Video2]+),\s*(\d{1,2}:\d{2}:\d{2}\.\d{3})\]/g;
   let lastIndex = 0;
@@ -31,29 +31,29 @@ function parseCitations(text: string): React.ReactNode[] {
     const [fullMatch, videoKey, timestamp] = match;
     const index = match.index;
 
-    // Text before the citation
     if (index > lastIndex) {
       parts.push(text.slice(lastIndex, index));
     }
 
-    // Convert timestamp 0:03:06.440 → seconds
     const timeParts = timestamp.split(':');
-    const seconds =
-      parseInt(timeParts[0]) * 3600 +
-      parseInt(timeParts[1]) * 60 +
-      parseFloat(timeParts[2]);
+    let seconds = 0;
+    if (timeParts.length === 3) {
+      seconds = parseInt(timeParts[0]) * 3600 + parseInt(timeParts[1]) * 60 + parseFloat(timeParts[2]);
+    } else if (timeParts.length === 2) {
+      seconds = parseInt(timeParts[0]) * 60 + parseFloat(timeParts[1]);
+    }
 
     const url = `${VIDEO_URLS[videoKey]}?t=${Math.floor(seconds)}`;
 
     parts.push(
       <a
-        key={index}
+        key={`ts-${index}`}
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block px-2 py-0.5 mx-0.5 text-xs font-medium text-blue-600 bg-blue-100 rounded hover:bg-blue-200 underline"
+        className="inline-block px-2 py-0.5 mx-1 text-xs font-medium text-blue-700 bg-blue-100 rounded hover:bg-blue-200 underline cursor-pointer"
         onClick={(e) => {
-          e.stopPropagation(); // prevent chat bubble click issues
+          e.stopPropagation();
           window.open(url, '_blank');
         }}
       >
@@ -64,7 +64,6 @@ function parseCitations(text: string): React.ReactNode[] {
     lastIndex = index + fullMatch.length;
   }
 
-  // Remaining text after last match
   if (lastIndex < text.length) {
     parts.push(text.slice(lastIndex));
   }
@@ -73,45 +72,99 @@ function parseCitations(text: string): React.ReactNode[] {
 }
 
 /**
- * Cleans bot text when "Hide info" is active
+ * Makes the **Sources** block clickable (full video from start)
  */
-function cleanBotText(text: string) {
-  let cleaned = text;
+function parseSourcesBlock(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    const trimmed = line.trim();
 
-  // Remove all [Video1, ...], [Video2, ...] citations
-  cleaned = cleaned.replace(/\[[Video1|Video2]+,?\s*\d{1,2}:\d{2}:\d{2}\.\d{3}\]/g, '');
+    // Match lines like: - [VIDEO1] Title https://...
+    const sourceMatch = trimmed.match(/-\s*\[VIDEO([12])\]\s+(.+?)\s+https?:\/\/(www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/i);
+    if (sourceMatch) {
+      const videoNum = sourceMatch[1]; // "1" or "2"
+      const videoKey = `Video${videoNum}`;
+      const url = VIDEO_URLS[videoKey];
 
-  // Remove Sources block at the end
-  cleaned = cleaned.replace(/\n\s*\*\*Sources:\*\*[\s\S]*/i, '');
-  cleaned = cleaned.replace(/\n\s*Sources:[\s\S]*/i, '');
+      return (
+        <div key={i}>
+          -{' '}
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline hover:text-blue-800 font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(url, '_blank');
+            }}
+          >
+            [{`VIDEO${videoNum}`}] {sourceMatch[2]}
+          </a>{' '}
+          <span className="text-gray-600">{url}</span>
+        </div>
+      );
+    }
 
-  // Clean up extra spaces
-  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
-
-  return cleaned;
+    return <div key={i}>{parseTimestampCitations(line)}</div>;
+  });
 }
 
 /**
- * Bot message with clickable timestamps + show/hide */
+ * Main text parser: handles both timestamp citations AND source links
+ */
+function parseBotText(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    const trimmed = line.trim();
+
+    // If it's a source line → use special parser
+    if (trimmed.startsWith('- [VIDEO') || trimmed.includes('**Sources:**')) {
+      if (trimmed.includes('**Sources:**')) {
+        return <div key={i} className="font-bold mt-3 mb-1">{line}</div>;
+      }
+      return <div key={i}>{parseSourcesBlock(line)}</div>;
+    }
+
+    // Regular line with possible inline citations
+    return (
+      <div key={i}>
+        {parseTimestampCitations(line)}
+        {i < lines.length - 1 && <br />}
+      </div>
+    );
+  });
+}
+
+/**
+ * Clean text when "Hide info" is clicked
+ */
+function cleanBotText(text: string): string {
+  let cleaned = text;
+
+  // Remove inline citations
+  cleaned = cleaned.replace(/\[[Video1|Video2]+,\s*\d{1,2}:\d{2}:\d{2}\.\d{3}\]/g, '');
+
+  // Remove entire Sources block
+  cleaned = cleaned.replace(/\n?\s*\*\*Sources:\*\*[\s\S]*/i, '');
+  cleaned = cleaned.replace(/\n?\s*Sources:[\s\S]*/i, '');
+
+  return cleaned.replace(/\s{2,}/g, ' ').trim();
+}
+
+/**
+ * Bot message component
+ */
 function BotMessage({ text }: { text: string }) {
   const [showInfo, setShowInfo] = useState(true);
   const displayText = showInfo ? text : cleanBotText(text);
 
-  // Split by lines to preserve <br/> or paragraphs
-  const lines = displayText.split('\n');
-
   return (
-    <div className="relative inline-block max-w-full px-4 py-3 rounded-2xl bg-gray-200 text-black whitespace-pre-wrap break-words">
-      <div className="space-y-2">
-        {lines.map((line, i) => (
-          <div key={i}>
-            {parseCitations(line)}
-            {i < lines.length - 1 && <br />}
-          </div>
-        ))}
+    <div className="relative inline-block max-w-full px-5 py-3 rounded-2xl bg-gray-200 text-black whitespace-pre-wrap break-words">
+      <div className="space-y-1 text-sm leading-relaxed">
+        {parseBotText(displayText)}
       </div>
 
-      {/* Toggle button */}
       <button
         onClick={() => setShowInfo(v => !v)}
         className="absolute bottom-1 right-2 text-xs px-2 py-1 rounded bg-black text-white opacity-70 hover:opacity-100 transition"
@@ -130,7 +183,6 @@ export default function Page() {
 
   const BACKEND_URL = 'https://proud1776ai.com';
 
-  // Load user
   useEffect(() => {
     const token = localStorage.getItem('jwt');
     if (!token) return;
@@ -145,7 +197,6 @@ export default function Page() {
       .catch(console.error);
   }, []);
 
-  // Autosize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (el) {
@@ -154,7 +205,6 @@ export default function Page() {
     }
   }, [prompt]);
 
-  // Send message
   const sendMessage = async () => {
     if (!prompt.trim()) return;
 
@@ -173,9 +223,7 @@ export default function Page() {
     ]);
 
     setPrompt('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "40px";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "40px";
   };
 
   return (
@@ -207,7 +255,7 @@ export default function Page() {
         )}
       </div>
 
-      {/* CHAT MESSAGES */}
+      {/* MESSAGES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
