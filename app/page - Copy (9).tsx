@@ -1,5 +1,3 @@
-// page.tsx (updated for streaming)
-
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -175,63 +173,18 @@ export default function Page() {
   }, [prompt]);
 
   const sendMessage = async () => {
-  if (!prompt.trim()) return;
-
-  const userMessage = { role: 'user' as const, text: prompt };
-  setMessages(prev => [...prev, userMessage, { role: 'bot' as const, text: '' }]);
-  setPrompt('');
-  if (textareaRef.current) {
-    textareaRef.current.style.height = '40px';
-  }
-
-  try {
-    const response = await fetch(`${BACKEND_URL}/chat`, {
+    if (!prompt.trim()) return;
+    const res = await fetch(`${BACKEND_URL}/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('jwt') || ''}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
     });
+    const data = await res.json();
 
-    if (!response.ok || !response.body) {
-      throw new Error(`Server error: ${response.status}`);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let botText = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      botText += chunk;
-
-      setMessages(prev => {
-        const newMsgs = [...prev];
-        newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], text: botText };
-        return [...newMsgs]; // force re-render
-      });
-    }
-  } catch (error) {
-    console.error('Streaming error:', error);
-
-    const errorMessage = error instanceof Error
-      ? error.message
-      : 'Connection failed. Check if your EC2 backend is running.';
-
-    setMessages(prev => {
-      const newMsgs = [...prev];
-      const last = newMsgs[newMsgs.length - 1];
-      if (last?.role === 'bot') {
-        last.text = `Error: ${errorMessage}`;
-      }
-      return newMsgs;
-    });
-  }
-};
+    setMessages(prev => [...prev, { role: 'user', text: prompt }, { role: 'bot', text: data.reply }]);
+    setPrompt('');
+    if (textareaRef.current) textareaRef.current.style.height = '40px';
+  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
