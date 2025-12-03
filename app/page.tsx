@@ -98,7 +98,7 @@ export default function Page() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const BACKEND_URL = 'https://proud1776ai.com';
