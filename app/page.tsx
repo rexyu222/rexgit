@@ -111,7 +111,7 @@ function BotMessage({ text }: { text: string }) {
 
       <button
         onClick={() => setShowInfo(v => !v)}
-        className="absolute bottom-1 right-2 text-xs bg-black text-white px-2 py-1 rounded opacity-70 hover:opacity-100"
+        className="absolute bottom-1 right-2 text-xs bg-white text-black px-2 py-1 rounded opacity-70 hover:opacity-100"
       >
         {showInfo ? "Hide info" : "Show info"}
       </button>
