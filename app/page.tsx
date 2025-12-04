@@ -1,4 +1,4 @@
-// page.tsx (white sidebar + bottom auth button + collapsible like Grok)
+// page.tsx (white sidebar + history + bottom auth button + collapsible)
 
 'use client';
 
@@ -15,12 +15,23 @@ type UserInfo = {
   picture: string;
 };
 
+type HistoryItem = {
+  question: string;
+};
+
+/* ======================
+	   VIDEO LINKS
+====================== */
+
 const VIDEO_URLS: Record<string, string> = {
   Video1: "https://www.youtube.com/watch?v=v6gxmBerTeM",
   Video2: "https://www.youtube.com/watch?v=DDLR5gk6JIE",
 };
 
-/* ===== Timestamp parsing ===== */
+/* ======================
+   Timestamp parsing
+====================== */
+
 function parseTimestampCitations(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex =
@@ -70,7 +81,10 @@ function cleanBotText(text: string) {
     .trim();
 }
 
-/* ===== Bot Bubble ===== */
+/* ======================
+     Bot Bubble
+====================== */
+
 function BotMessage({ text }: { text: string }) {
   const [showInfo, setShowInfo] = useState(true);
   const display = showInfo ? text : cleanBotText(text);
@@ -83,7 +97,7 @@ function BotMessage({ text }: { text: string }) {
 
       <button
         onClick={() => setShowInfo(v => !v)}
-        className="absolute bottom-1 right-2 text-xs bg-black text-white px-2 py-1 rounded opacity-70 hover:opacity-100"
+        className="absolute bottom-1 right-2 text-xs bg-black text-white px-2 py-1 rounded"
       >
         {showInfo ? 'Hide info' : 'Show info'}
       </button>
@@ -92,27 +106,62 @@ function BotMessage({ text }: { text: string }) {
 }
 
 /* ======================
-          Page
+            Page
 ====================== */
+
 export default function Page() {
+
+  const BACKEND_URL = 'https://proud1776ai.com';
+
   const [user, setUser] = useState<UserInfo | null>(null);
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const BACKEND_URL = 'https://proud1776ai.com';
+
+  /* ======================
+       Load user data
+====================== */
 
   useEffect(() => {
     const token = localStorage.getItem('jwt');
     if (!token) return;
 
     fetch(`${BACKEND_URL}/api/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
     })
       .then(r => r.json())
       .then(d => d.email && setUser(d));
   }, []);
+
+  /* ======================
+     Load History
+====================== */
+
+  useEffect(() => {
+    if (!user) return;
+
+    const token = localStorage.getItem('jwt');
+
+    fetch(`${BACKEND_URL}/api/history`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+      .then(r => r.json())
+      .then(data => setHistory(data || []))
+      .catch(console.error);
+
+  }, [user]);
+
+  /* ======================
+   Auto-grow textarea
+====================== */
 
   useEffect(() => {
     if (!textareaRef.current) return;
@@ -121,7 +170,10 @@ export default function Page() {
       `${textareaRef.current.scrollHeight}px`;
   }, [prompt]);
 
-  /* ===== Send Message ===== */
+  /* ======================
+        Send Chat
+====================== */
+
   const sendMessage = async () => {
     if (!prompt.trim()) return;
 
@@ -170,38 +222,67 @@ export default function Page() {
   };
 
   /* ======================
-            Render
+         Render
 ====================== */
+
   return (
     <div className="h-screen flex bg-gray-50">
 
       {/* ========= Sidebar ========= */}
       <div
-        className={`flex flex-col bg-white text-black border-r
-        transition-all duration-300
+        className={`flex flex-col bg-white text-black border-r transition-all duration-300 
         ${sidebarOpen ? 'w-64' : 'w-14'}`}
       >
 
-        {/* Nav links */}
         <div className="flex-1 p-3 overflow-hidden">
+
           {sidebarOpen && (
+
             <>
-              
               <div className="space-y-2">
-                {['Chat','History'].map(item => (
-                  <div
-                    key={item}
-                    className="cursor-pointer rounded px-3 py-2 hover:bg-gray-200"
-                  >
-                    {item}
+
+                {/* MAIN TABS */}
+                <div className="rounded px-3 py-2 bg-gray-100 font-semibold">
+                  Chat
+                </div>
+
+                {/* HISTORY */}
+                <div className="mt-4">
+                  <div className="font-semibold mb-2">
+                    History
                   </div>
-                ))}
+
+                  <div className="max-h-64 overflow-y-auto space-y-1">
+
+                    {history.length === 0 && (
+                      <div className="text-xs text-gray-400">
+                        No history yet
+                      </div>
+                    )}
+
+                    {history.map((h, i) => (
+                      <div
+                        key={i}
+                        className="cursor-pointer text-sm px-2 py-1 rounded hover:bg-gray-200 truncate"
+                        onClick={() => {
+                          setPrompt(h.question);
+                        }}
+                        title={h.question}
+                      >
+                        {h.question}
+                      </div>
+                    ))}
+
+                  </div>
+                </div>
+
               </div>
             </>
           )}
+
         </div>
 
-        {/* ========= Auth area (BOTTOM) ========= */}
+        {/* ========= AUTH (BOTTOM) ========= */}
         <div className="border-t px-2 py-3 text-center space-y-2">
 
           {!user ? (
@@ -211,8 +292,7 @@ export default function Page() {
                   (window.location.href =
                     `${BACKEND_URL}/auth/login`)
                 }
-                className="w-full px-3 py-2 bg-blue-600
-                  text-white rounded-lg hover:bg-blue-700"
+                className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Sign in with Google
               </button>
@@ -220,6 +300,7 @@ export default function Page() {
           ) : (
             sidebarOpen && (
               <div className="flex flex-col items-center gap-2">
+
                 <img
                   src={user.picture}
                   alt="avatar"
@@ -235,48 +316,39 @@ export default function Page() {
                     localStorage.removeItem('jwt');
                     window.location.reload();
                   }}
-                  className="w-full px-3 py-2 bg-red-600
-                    text-white rounded-lg hover:bg-red-700"
+                  className="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
                   Logout
                 </button>
+
               </div>
             )
           )}
 
         </div>
 
-        {/* ========= Sidebar Toggle ========= */}
+        {/* ========= COLLAPSE TOGGLE ========= */}
         <button
-          onClick={() =>
-            setSidebarOpen(open => !open)}
-          className="w-full py-3 border-t font-semibold
-          hover:bg-gray-100"
+          onClick={() => setSidebarOpen(s => !s)}
+          className="w-full py-3 border-t font-semibold hover:bg-gray-100"
         >
           {sidebarOpen ? '<<' : '>>'}
         </button>
-
       </div>
 
-      {/* ========= Main App ========= */}
+      {/* ========= MAIN CHAT ========= */}
       <div className="flex-1 flex flex-col">
 
-        {/* Chat */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((m, i) => (
             <div
               key={i}
-              className={
-                m.role === 'user'
-                  ? 'text-right'
-                  : 'text-left'
-              }
+              className={m.role === 'user' ? 'text-right' : 'text-left'}
             >
               {m.role === 'bot'
                 ? <BotMessage text={m.text} />
                 : (
-                  <div className="inline-block bg-blue-600
-                    text-white px-4 py-2 rounded-xl">
+                  <div className="inline-block bg-blue-600 text-white px-4 py-2 rounded-xl">
                     {m.text}
                   </div>
                 )}
@@ -284,36 +356,29 @@ export default function Page() {
           ))}
         </div>
 
-        {/* Input */}
+        {/* ========= INPUT ========= */}
         <div className="p-4 border-t bg-white">
           <div
-            className="flex items-end bg-gray-100
-            rounded-3xl p-3"
+            className="flex items-end bg-gray-100 rounded-3xl p-3"
           >
             <textarea
               ref={textareaRef}
               rows={1}
               value={prompt}
-              onChange={e =>
-                setPrompt(e.target.value)}
+              onChange={e => setPrompt(e.target.value)}
               onKeyDown={e => {
-                if (
-                  e.key === 'Enter'
-                  && !e.shiftKey
-                ) {
+                if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   sendMessage();
                 }
               }}
               placeholder="Ask about jogging or running..."
-              className="flex-1 resize-none outline-none
-                bg-transparent text-lg"
+              className="flex-1 resize-none outline-none bg-transparent text-lg"
             />
 
             <button
               onClick={sendMessage}
-              className="ml-3 px-5 py-2 bg-green-600
-              text-white rounded-xl hover:bg-green-700"
+              className="ml-3 px-5 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
             >
               Send
             </button>

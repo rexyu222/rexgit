@@ -186,12 +186,9 @@ export default function Page() {
         <div className="flex-1 p-3 overflow-hidden">
           {sidebarOpen && (
             <>
-              <h2 className="font-bold text-lg mb-4">
-                Navigation
-              </h2>
-
+              
               <div className="space-y-2">
-                {['Home','Chat','History','Settings'].map(item => (
+                {['Chat','History'].map(item => (
                   <div
                     key={item}
                     className="cursor-pointer rounded px-3 py-2 hover:bg-gray-200"
