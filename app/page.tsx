@@ -153,6 +153,10 @@ export default function Page() {
      Load History
 ====================== */
 
+  /* ======================
+     Load History
+  ====================== */
+
   useEffect(() => {
     if (!user) return;
 
@@ -168,26 +172,17 @@ export default function Page() {
 
         if (!Array.isArray(data)) return;
 
-        // ✅ Robust answer extraction from any schema
+        // ✅ EXACT MATCH to your DynamoDB schema
         const normalized: HistoryItem[] = data.map((item: any) => {
 
-          // Question field resolution
           const question =
-            item.question ??
-            item.q ??
-            item.prompt ??
-            (item.Question?.S ?? '') ??
+            item.question?.S ??   // raw DynamoDB format
+            item.question ??      // normal JSON format
             '';
 
-          // ✅ Answer field resolution (handles DynamoDB raw & custom naming)
           const answer =
-            item.answer ??
-            item.bot_answer ??
-            item.reply ??
-            item.response ??
-            item.answer_text ??
-            (item.Answer?.S ?? '') ??
-            (item.bot?.S ?? '') ??
+            item.answer?.S ??     // raw DynamoDB format
+            item.answer ??        // normal JSON format
             '';
 
           return { question, answer };
