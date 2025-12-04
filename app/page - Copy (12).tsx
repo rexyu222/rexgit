@@ -17,7 +17,6 @@ type UserInfo = {
 
 type HistoryItem = {
   question: string;
-  answer: string;         // ✅ ADD ANSWER FIELD
 };
 
 /* ======================
@@ -223,18 +222,6 @@ export default function Page() {
   };
 
   /* ======================
-        Load History Chat
-====================== */
-
-  const loadHistoryChat = (item: HistoryItem) => {
-    setMessages([
-      { role: 'user', text: item.question },
-      { role: 'bot', text: item.answer }
-    ]);
-    setPrompt('');
-  };
-
-  /* ======================
          Render
 ====================== */
 
@@ -277,7 +264,9 @@ export default function Page() {
                       <div
                         key={i}
                         className="cursor-pointer text-sm px-2 py-1 rounded hover:bg-gray-200 truncate"
-                        onClick={() => loadHistoryChat(h)}   // ✅ SHOW Q+A
+                        onClick={() => {
+                          setPrompt(h.question);
+                        }}
                         title={h.question}
                       >
                         {h.question}
