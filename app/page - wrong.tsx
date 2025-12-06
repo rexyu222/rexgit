@@ -566,50 +566,6 @@ export default function Page() {
           </>
         )}
 
-<div className="border-t px-2 py-3 text-center space-y-2">
-
-          {!user ? (
-            sidebarOpen && (
-              <button
-                onClick={() =>
-                  (window.location.href =
-                    `${BACKEND_URL}/auth/login`)
-                }
-                className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Sign in with Google
-              </button>
-            )
-          ) : (
-            sidebarOpen && (
-              <div className="flex flex-col items-center gap-2">
-
-                <img
-                  src={user.picture}
-                  alt="avatar"
-                  className="w-10 h-10 rounded-full"
-                />
-
-                <span className="font-semibold text-sm">
-                  {user.name}
-                </span>
-
-                <button
-                  onClick={() => {
-                    localStorage.removeItem('jwt');
-                    window.location.reload();
-                  }}
-                  className="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Logout
-                </button>
-
-              </div>
-            )
-          )}
-
-        </div>
-
         <button
           className="w-full mt-2"
           onClick={() => setSidebarOpen(!sidebarOpen)}
