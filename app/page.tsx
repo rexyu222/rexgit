@@ -242,8 +242,16 @@ export default function Page() {
         Authorization:
           `Bearer ${localStorage.getItem('jwt') || ''}`,
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ 
+        prompt,
+        session_id: sessionId,
+       }),
     });
+
+    const newSessionId =  res.headers.get('X-Session-ID');
+
+    if (newSessionId && !sessionId)
+      setSessionId(newSessionId);
 
     const reader = res.body?.getReader();
     if (!reader) return;
@@ -441,6 +449,121 @@ export default function Page() {
           </div>
         </div>
 
+      </div>
+    </div>
+  );
+
+  /* ======================
+      LOAD CHAT SESSION
+  ====================== */
+  const loadSession = async (sid: string) => {
+
+    setSessionId(sid);
+
+    const res = await fetch(
+      `${BACKEND_URL}/api/session/${sid}`,
+      {
+        headers: {
+          Authorization:
+            `Bearer ${localStorage.getItem('jwt') || ''}`,
+        },
+      }
+    );
+
+    const data = await res.json();
+
+    const msgs: ChatMessage[] = [];
+
+    data.forEach((item: any) => {
+      msgs.push({ role: 'user', text: item.question });
+      msgs.push({ role: 'bot', text: item.answer });
+    });
+
+    setMessages(msgs);
+  };
+
+  /* ======================
+          RENDER
+  ====================== */
+  return (
+    <div className="h-screen flex">
+
+      {/* SIDEBAR */}
+      <div className={`bg-white border-r p-3
+        ${sidebarOpen ? 'w-64' : 'w-14'}`}>
+
+        {sidebarOpen && (
+          <>
+            <h2 className="font-bold mb-2">History</h2>
+
+            {sessions.map((s, i) => (
+              <div
+                key={i}
+                onClick={() => loadSession(s.session_id)}
+                className="cursor-pointer px-2 py-1 truncate hover:bg-gray-100 rounded"
+              >
+                {s.title}
+              </div>
+            ))}
+          </>
+        )}
+
+        <button
+          className="w-full mt-2"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? '<<' : '>>'}
+        </button>
+      </div>
+
+      {/* CHAT */}
+      <div className="flex-1 flex flex-col">
+
+        <div className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {messages.map((m, i) => (
+            <div
+              key={i}
+              className={
+                m.role === 'user'
+                  ? 'text-right'
+                  : 'text-left'
+              }
+            >
+              <div>
+                {m.text}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* INPUT */}
+        <div className="p-3 border-t">
+
+          <textarea
+            ref={textareaRef}
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            onKeyDown={e => {
+              if (
+                e.key === 'Enter' &&
+                !e.shiftKey
+              ) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            rows={1}
+            className="w-full border rounded p-2"
+          />
+
+          <button
+            onClick={sendMessage}
+            className="mt-2 px-5 py-2 bg-green-600 text-white rounded"
+          >
+            Send
+          </button>
+
+        </div>
       </div>
     </div>
   );
