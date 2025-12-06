@@ -10,6 +10,13 @@ type ChatMessage = {
   text: string;
 };
 
+type SessionItem = {
+  session_id: string;
+  title: string;
+};
+
+const BACKEND_URL = 'https://proud1776ai.com';
+
 type UserInfo = {
   email: string;
   name: string;
@@ -121,7 +128,7 @@ function BotMessage({ text }: { text: string }) {
 
 export default function Page() {
 
-  const BACKEND_URL = 'https://proud1776ai.com';
+//  const BACKEND_URL = 'https://proud1776ai.com';
 
   const [user, setUser] = useState<UserInfo | null>(null);
   const [prompt, setPrompt] = useState('');
@@ -129,7 +136,11 @@ export default function Page() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
 
   /* ======================
        Load user
@@ -156,7 +167,7 @@ export default function Page() {
   /* ======================
      Load History
   ====================== */
-
+/*
   useEffect(() => {
     if (!user) return;
 
@@ -195,9 +206,9 @@ export default function Page() {
 
   }, [user]);
 
-  /* ======================
-   Auto-grow textarea
-====================== */
+  // ======================
+//   Auto-grow textarea
+//====================== 
 
   useEffect(() => {
     if (!textareaRef.current) return;
@@ -206,9 +217,9 @@ export default function Page() {
       `${textareaRef.current.scrollHeight}px`;
   }, [prompt]);
 
-  /* ======================
-        Send Chat
-====================== */
+  // ======================
+    //    Send Chat
+//====================== /
 
   const sendMessage = async () => {
     if (!prompt.trim()) return;
@@ -257,9 +268,9 @@ export default function Page() {
     }
   };
 
-  /* ======================
-        Load History Chat
-====================== */
+  // ======================
+    //    Load History Chat
+//====================== 
 
   const loadHistoryChat = (item: HistoryItem) => {
 
@@ -271,14 +282,14 @@ export default function Page() {
     setPrompt('');
   };
 
-  /* ======================
-         Render
-====================== */
+  // ======================
+    //     Render
+//====================== 
 
   return (
     <div className="h-screen flex bg-gray-50">
 
-      {/* ===== SIDEBAR ===== */}
+//      {/* ===== SIDEBAR ===== }
       <div className={`flex flex-col bg-white text-black border-r transition-all duration-300 
         ${sidebarOpen ? 'w-64' : 'w-14'}`}>
 
@@ -324,7 +335,7 @@ export default function Page() {
           )}
         </div>
 
-        {/* ===== AUTH ===== */}
+//        {/* ===== AUTH ===== /}
         <div className="border-t px-2 py-3 text-center space-y-2">
 
           {!user ? (
@@ -369,7 +380,7 @@ export default function Page() {
 
         </div>
 
-        {/* ===== TOGGLE ===== */}
+//        {/* ===== TOGGLE ===== /}
         <button
           onClick={() => setSidebarOpen(s => !s)}
           className="w-full py-3 border-t font-semibold hover:bg-gray-100"
@@ -379,7 +390,7 @@ export default function Page() {
 
       </div>
 
-      {/* ===== CHAT ===== */}
+//      {/* ===== CHAT ===== /}
       <div className="flex-1 flex flex-col">
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -401,7 +412,7 @@ export default function Page() {
           ))}
         </div>
 
-        {/* ===== INPUT ===== */}
+//        {/* ===== INPUT ===== /}
         <div className="p-4 border-t bg-white">
           <div className="flex items-end bg-gray-100 rounded-3xl p-3">
 
@@ -432,5 +443,187 @@ export default function Page() {
 
       </div>
     </div>
+  );*/
+
+    useEffect(() => {
+    fetch(`${BACKEND_URL}/api/history`, {
+      headers: {
+        Authorization:
+          `Bearer ${localStorage.getItem('jwt') || ''}`,
+      },
+    })
+      .then(r => r.json())
+      .then(data => setSessions(data || []))
+      .catch(console.error);
+  }, []);
+
+  /* ======================
+        SEND MESSAGE
+  ====================== */
+  const sendMessage = async () => {
+
+    if (!prompt.trim()) return;
+
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', text: prompt },
+      { role: 'bot', text: '' },
+    ]);
+
+    const res = await fetch(`${BACKEND_URL}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization:
+          `Bearer ${localStorage.getItem('jwt') || ''}`,
+      },
+      body: JSON.stringify({
+        prompt,
+        session_id: sessionId,
+      }),
+    });
+
+    const newSessionId =
+      res.headers.get('X-Session-ID');
+
+    if (newSessionId && !sessionId)
+      setSessionId(newSessionId);
+
+    setPrompt('');
+
+    const reader = res.body?.getReader();
+    if (!reader) return;
+
+    const decoder = new TextDecoder();
+    let text = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      text += decoder.decode(value);
+
+      setMessages(prev => {
+        const copy = [...prev];
+        copy[copy.length - 1].text = text;
+        return copy;
+      });
+    }
+  };
+
+  /* ======================
+      LOAD CHAT SESSION
+  ====================== */
+  const loadSession = async (sid: string) => {
+
+    setSessionId(sid);
+
+    const res = await fetch(
+      `${BACKEND_URL}/api/session/${sid}`,
+      {
+        headers: {
+          Authorization:
+            `Bearer ${localStorage.getItem('jwt') || ''}`,
+        },
+      }
+    );
+
+    const data = await res.json();
+
+    const msgs: ChatMessage[] = [];
+
+    data.forEach((item: any) => {
+      msgs.push({ role: 'user', text: item.question });
+      msgs.push({ role: 'bot', text: item.answer });
+    });
+
+    setMessages(msgs);
+  };
+
+  /* ======================
+          RENDER
+  ====================== */
+  return (
+    <div className="h-screen flex">
+
+      {/* SIDEBAR */}
+      <div className={`bg-white border-r p-3
+        ${sidebarOpen ? 'w-64' : 'w-14'}`}>
+
+        {sidebarOpen && (
+          <>
+            <h2 className="font-bold mb-2">History</h2>
+
+            {sessions.map((s, i) => (
+              <div
+                key={i}
+                onClick={() => loadSession(s.session_id)}
+                className="cursor-pointer px-2 py-1 truncate hover:bg-gray-100 rounded"
+              >
+                {s.title}
+              </div>
+            ))}
+          </>
+        )}
+
+        <button
+          className="w-full mt-2"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? '<<' : '>>'}
+        </button>
+      </div>
+
+      {/* CHAT */}
+      <div className="flex-1 flex flex-col">
+
+        <div className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {messages.map((m, i) => (
+            <div
+              key={i}
+              className={
+                m.role === 'user'
+                  ? 'text-right'
+                  : 'text-left'
+              }
+            >
+              <div>
+                {m.text}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* INPUT */}
+        <div className="p-3 border-t">
+
+          <textarea
+            ref={textareaRef}
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            onKeyDown={e => {
+              if (
+                e.key === 'Enter' &&
+                !e.shiftKey
+              ) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            rows={1}
+            className="w-full border rounded p-2"
+          />
+
+          <button
+            onClick={sendMessage}
+            className="mt-2 px-5 py-2 bg-green-600 text-white rounded"
+          >
+            Send
+          </button>
+
+        </div>
+      </div>
+    </div>
   );
+
 }
