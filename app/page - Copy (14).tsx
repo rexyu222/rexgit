@@ -307,17 +307,9 @@ export default function Page() {
             <>
               <div className="space-y-2">
 
-                <button
-                      className="rounded px-3 py-2 bg-gray-100 font-semibold w-full text-left hover:bg-gray-200"
-                      onClick={() => {
-                      setMessages([]);
-                      setPrompt('');
-                      setSessionId(null);   // ✅ THIS IS THE KEY FIX
-                      }}
-                >
-                    New Chat
-                </button>
-
+                <div className="rounded px-3 py-2 bg-gray-100 font-semibold">
+                  Chat
+                </div>
 
                 <div className="mt-4">
                   <div className="font-semibold mb-2">
