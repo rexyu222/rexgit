@@ -257,7 +257,6 @@ export default function Page() {
 
     if (newSessionId && !sessionId)
       setSessionId(newSessionId);
-  //     setSessionId(res.body.session_id);
 
     const reader = res.body?.getReader();
     if (!reader) return;
@@ -470,7 +469,7 @@ export default function Page() {
   /* ======================
       LOAD CHAT SESSION
   ====================== */
-  /*const loadSession = async (sid: string) => {
+  const loadSession = async (sid: string) => {
 
     setSessionId(sid);
 
@@ -495,15 +494,15 @@ export default function Page() {
 
     setMessages(msgs);
   };
-*/
+
   /* ======================
           RENDER
   ====================== */
-/*  return (
+  return (
     <div className="h-screen flex">
-*/
-//      {/* SIDEBAR */}
-/*      <div className={`bg-white border-r p-3
+
+      {/* SIDEBAR */}
+      <div className={`bg-white border-r p-3
         ${sidebarOpen ? 'w-64' : 'w-14'}`}>
 
         {sidebarOpen && (
@@ -529,9 +528,9 @@ export default function Page() {
           {sidebarOpen ? '<<' : '>>'}
         </button>
       </div>
-*/
- //     {/* CHAT */}
-/*      <div className="flex-1 flex flex-col">
+
+      {/* CHAT */}
+      <div className="flex-1 flex flex-col">
 
         <div className="flex-1 p-4 space-y-2 overflow-y-auto">
           {messages.map((m, i) => (
@@ -549,9 +548,9 @@ export default function Page() {
             </div>
           ))}
         </div>
-*/
-  //      {/* INPUT */}
-/*        <div className="p-3 border-t">
+
+        {/* INPUT */}
+        <div className="p-3 border-t">
 
           <textarea
             ref={textareaRef}
@@ -580,6 +579,6 @@ export default function Page() {
         </div>
       </div>
     </div>
-  );*/
+  );
 
 }
