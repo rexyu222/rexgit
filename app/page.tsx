@@ -26,6 +26,7 @@ type UserInfo = {
 type HistoryItem = {
   question: string;
   answer: string;
+  session_id: string;
 };
 
 /* ======================
@@ -196,7 +197,11 @@ export default function Page() {
             item.answer ??        // normal JSON format
             '';
 
-          return { question, answer };
+          const session_id =
+            item.session_id?.S ??   // raw DynamoDB format
+            item.session_id ??      // normal JSON format
+            '';
+          return { question, answer, session_id };
         });
 
         setHistory(normalized);
