@@ -253,22 +253,6 @@ export default function Page() {
        }),
     });
 
-/* ✅ LOG EVERYTHING YOU CAN SAFELY */
-console.log('Response object:', res);
-console.log('Status:', res.status);
-console.log('OK:', res.ok);
-
-console.log(
-  'Headers:',
-  Object.fromEntries(res.headers.entries())
-);
-
-console.log(
-  'X-Session-ID:',
-  res.headers.get('X-Session-ID')
-);
-////////////////////////////////////////////////////
-
     const newSessionId =  res.headers.get('X-Session-ID');
 
     if (newSessionId && !sessionId)
