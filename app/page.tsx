@@ -252,7 +252,10 @@ export default function Page() {
         session_id: sessionId,
        }),
     });
-
+console.log(
+  'X-Session-ID before:',
+  res.headers.get('X-Session-Id')
+);
     const newSessionId2 = res.headers.get("X-Session-ID");
     if (newSessionId2) {
        setSessionId(newSessionId2);
