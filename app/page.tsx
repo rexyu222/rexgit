@@ -270,9 +270,10 @@ console.log(
 ////////////////////////////////////////////////////
 
     const newSessionId =  res.headers.get('X-Session-ID');
-
+    console.log('rex sessionId before:', sessionId);
     if (newSessionId && !sessionId)
       setSessionId(newSessionId);
+     console.log('rex sessionId late:', sessionId);
   //     setSessionId(res.body.session_id);
 
     const reader = res.body?.getReader();
@@ -309,6 +310,8 @@ console.log(
       { role: 'user', text: item.question },
       { role: 'bot', text: item.answer || '(No saved answer found)' }
     ]);
+
+    setSessionId(item.session_id);
 
     setPrompt('');
   };
