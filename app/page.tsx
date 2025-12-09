@@ -253,6 +253,10 @@ export default function Page() {
        }),
     });
 
+    const newSessionId2 = res.headers.get("X-Session-ID");
+    if (newSessionId2) {
+       setSessionId(newSessionId2);
+    }
 /* ✅ LOG EVERYTHING YOU CAN SAFELY */
 console.log('Response object:', res);
 console.log('Status:', res.status);
