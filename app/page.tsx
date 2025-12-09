@@ -186,7 +186,7 @@ export default function Page() {
 
         // ✅ EXACT MATCH to your DynamoDB schema
         const normalized: HistoryItem[] = data.map((item: any) => {
-
+          console.log('item rex:', item);
           const question =
             item.question?.S ??   // raw DynamoDB format
             item.question ??      // normal JSON format
