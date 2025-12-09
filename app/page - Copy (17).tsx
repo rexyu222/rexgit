@@ -27,7 +27,6 @@ type HistoryItem = {
   question: string;
   answer: string;
   session_id: string;
-  createdTime: number;
 };
 
 /* ======================
@@ -202,11 +201,7 @@ export default function Page() {
             item.session_id?.S ??   // raw DynamoDB format
             item.session_id ??      // normal JSON format
             '';
-
-          const createdTime =
-            Number(item.createdTime?.N ?? item.createdTime ?? 0);
-
-          return { question, answer, session_id, createdTime };
+          return { question, answer, session_id };
         });
 
         setHistory(normalized);
@@ -316,51 +311,17 @@ console.log(
     //    Load History Chat
 //====================== 
 
-  const loadHistoryChat = (session_id: string) => {
+  const loadHistoryChat = (item: HistoryItem) => {
 
-  const sessionItems = history
-    .filter(h => h.session_id === session_id)
-    .sort((a, b) => a.createdTime - b.createdTime);
-
-  const fullMessages: ChatMessage[] = [];
-
-  sessionItems.forEach(item => {
-    fullMessages.push(
+    setMessages([
       { role: 'user', text: item.question },
       { role: 'bot', text: item.answer || '(No saved answer found)' }
-    );
-  });
+    ]);
 
-  setMessages(fullMessages);
-  setSessionId(session_id);
-  setPrompt('');
-};
+    setSessionId(item.session_id);
 
-
-// ======================
-// Build session list
-// ======================
-
-const sessionsMap = new Map<string, HistoryItem[]>();
-
-history.forEach(item => {
-  if (!sessionsMap.has(item.session_id)) {
-    sessionsMap.set(item.session_id, []);
-  }
-  sessionsMap.get(item.session_id)!.push(item);
-});
-
-// turn into array, sort by createdTime
-const groupedSessions = Array.from(sessionsMap.values())
-  .map(sessionItems =>
-    sessionItems.sort((a, b) => a.createdTime - b.createdTime)
-  );
-
-// oldest session first (optional but recommended)
-groupedSessions.sort(
-  (a, b) => a[0].createdTime - b[0].createdTime
-);
-
+    setPrompt('');
+  };
 
   // ======================
     //     Render
@@ -404,21 +365,16 @@ groupedSessions.sort(
                       </div>
                     )}
 
-                    {groupedSessions.map((session, i) => {
-  const firstItem = session[0]; // oldest question
-
-  return (
-    <div
-      key={i}
-      className="cursor-pointer text-sm px-2 py-1 rounded hover:bg-gray-200 truncate"
-      title={firstItem.question}
-      onClick={() => loadHistoryChat(firstItem.session_id)}
-    >
-      {firstItem.question}
-    </div>
-  );
-})}
-
+                    {history.map((h, i) => (
+                      <div
+                        key={i}
+                        className="cursor-pointer text-sm px-2 py-1 rounded hover:bg-gray-200 truncate"
+                        onClick={() => loadHistoryChat(h)}
+                        title={h.question}
+                      >
+                        {h.question}
+                      </div>
+                    ))}
 
                   </div>
                 </div>
