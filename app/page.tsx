@@ -293,6 +293,7 @@ console.log(
           role: 'bot',
           text: botText
         };
+        console.log('rex updated:', updated);
         return updated;
       });
     }
