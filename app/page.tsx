@@ -320,7 +320,7 @@ console.log(
 
   const sessionItems = history
     .filter(h => h.session_id === session_id)
-    .sort((a, b) => b.createdTime - a.createdTime);
+    .sort((a, b) => a.createdTime - b.createdTime);
 
   const fullMessages: ChatMessage[] = [];
 
