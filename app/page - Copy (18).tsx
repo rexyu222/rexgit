@@ -320,7 +320,7 @@ console.log(
 
   const sessionItems = history
     .filter(h => h.session_id === session_id)
-    .sort((a, b) => b.createdTime - a.createdTime);
+    .sort((a, b) => a.createdTime - b.createdTime);
 
   const fullMessages: ChatMessage[] = [];
 
@@ -353,12 +353,12 @@ history.forEach(item => {
 // turn into array, sort by createdTime
 const groupedSessions = Array.from(sessionsMap.values())
   .map(sessionItems =>
-    sessionItems.sort((a, b) => b.createdTime - a.createdTime)
+    sessionItems.sort((a, b) => a.createdTime - b.createdTime)
   );
 
 // oldest session first (optional but recommended)
 groupedSessions.sort(
-  (a, b) => b[0].createdTime - a[0].createdTime
+  (a, b) => a[0].createdTime - b[0].createdTime
 );
 
 
