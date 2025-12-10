@@ -355,12 +355,12 @@ const groupedSessions = Array.from(sessionsMap.values())
   .map(sessionItems =>
     sessionItems.sort((a, b) => b.createdTime - a.createdTime)
   );
-
+console.log('groupedSessions rex before:', groupedSessions);
 // oldest session first (optional but recommended)
 groupedSessions.sort(
   (a, b) => a[0].createdTime - b[0].createdTime
 );
-
+console.log('groupedSessions rex after:', groupedSessions);
 
   // ======================
     //     Render
