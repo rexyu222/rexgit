@@ -358,7 +358,7 @@ const groupedSessions = Array.from(sessionsMap.values())
 
 // oldest session first (optional but recommended)
 groupedSessions.sort(
-  (a, b) => b[0].createdTime - a[0].createdTime
+  (a, b) => a[0].createdTime - b[0].createdTime
 );
 
 
