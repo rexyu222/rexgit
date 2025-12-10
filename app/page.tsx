@@ -87,7 +87,7 @@ function BotMessage({ text }: { text: string }) {
   const display = showInfo ? text : cleanBotText(text);
 
   return (
-    <div className="relative bg-gray-200 px-4 py-3 rounded-xl max-w-xl">
+    <div className="relative bg-gray-200 px-4 py-3 rounded-xl w-full max-w-4xl">
       <div className="text-sm space-y-1">
         {parseTimestampCitations(display)}
       </div>
@@ -358,7 +358,7 @@ export default function Page() {
 
       {/* CHAT */}
       <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col items-center">
           {messages.map((m, i) => (
             <div
               key={i}
@@ -371,7 +371,7 @@ export default function Page() {
               {m.role === 'bot' ? (
                 <BotMessage text={m.text} />
               ) : (
-                <div className="inline-block bg-blue-600 text-white px-5 py-3 rounded-2xl max-w-xl">
+                <div className="inline-block bg-blue-600 text-white px-5 py-3 rounded-2xl w-full max-w-4xl">
                   {m.text}
                 </div>
               )}
