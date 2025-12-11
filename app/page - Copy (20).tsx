@@ -84,7 +84,7 @@ function BotMessage({ text }: { text: string }) {
   const display = showInfo ? text : cleanBotText(text);
 
   return (
-    <div className="relative bg-gray-200 px-4 py-3 rounded-xl w-full max-w-4xl">
+    <div className="relative bg-gray-200 px-4 py-3 rounded-xl max-w-xl">
       <div className="text-sm space-y-1">{parseTimestampCitations(display)}</div>
       <button
         onClick={() => setShowInfo(v => !v)}
@@ -108,8 +108,6 @@ export default function Page() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(260); // default ~w-64
   const isResizing = useRef(false);
-  const [showInput, setShowInput] = useState(true);
-
 
 const startResize = () => {
   isResizing.current = true;
@@ -225,22 +223,6 @@ useEffect(() => {
     textareaRef.current.style.height = 'auto';
     textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
   }, [prompt]);
-
-  useEffect(() => {
-  const handleMouseMove = (e: MouseEvent) => {
-    const bottomZone = window.innerHeight - 120;
-
-    if (e.clientY < bottomZone) {
-      setShowInput(false);
-    } else {
-      setShowInput(true);
-    }
-  };
-
-  window.addEventListener('mousemove', handleMouseMove);
-  return () => window.removeEventListener('mousemove', handleMouseMove);
-}, []);
-
 
   /* Send message */
   const sendMessage = async () => {
@@ -429,7 +411,7 @@ useEffect(() => {
 
       {/* CHAT AREA */}
       <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col items-center">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-20">
               Start a new chat or select one from the sidebar
@@ -440,7 +422,7 @@ useEffect(() => {
                 {m.role === 'bot' ? (
                   <BotMessage text={m.text} />
                 ) : (
-                  <div className="inline-block bg-blue-600 text-white px-5 py-3 rounded-2xl w-full max-w-4xl">
+                  <div className="inline-block bg-blue-600 text-white px-5 py-3 rounded-2xl max-w-2xl">
                     {m.text}
                   </div>
                 )}
@@ -449,13 +431,7 @@ useEffect(() => {
           )}
         </div>
 
- 
-        <div
-            className={`p-4 border-t bg-white transition-transform duration-300 ${
-                   showInput ? 'translate-y-0' : 'translate-y-full'
-            }`}
-        >
-
+        <div className="p-4 border-t bg-white">
           <div className="flex items-end bg-gray-100 rounded-3xl p-3">
             <textarea
               ref={textareaRef}

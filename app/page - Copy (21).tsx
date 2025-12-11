@@ -84,7 +84,7 @@ function BotMessage({ text }: { text: string }) {
   const display = showInfo ? text : cleanBotText(text);
 
   return (
-    <div className="relative bg-gray-200 px-4 py-3 rounded-xl w-full max-w-4xl">
+    <div className="relative bg-gray-200 px-4 py-3 rounded-xl max-w-xl">
       <div className="text-sm space-y-1">{parseTimestampCitations(display)}</div>
       <button
         onClick={() => setShowInfo(v => !v)}
@@ -429,7 +429,7 @@ useEffect(() => {
 
       {/* CHAT AREA */}
       <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col items-center">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-20">
               Start a new chat or select one from the sidebar
@@ -440,7 +440,7 @@ useEffect(() => {
                 {m.role === 'bot' ? (
                   <BotMessage text={m.text} />
                 ) : (
-                  <div className="inline-block bg-blue-600 text-white px-5 py-3 rounded-2xl w-full max-w-4xl">
+                  <div className="inline-block bg-blue-600 text-white px-5 py-3 rounded-2xl max-w-2xl">
                     {m.text}
                   </div>
                 )}
