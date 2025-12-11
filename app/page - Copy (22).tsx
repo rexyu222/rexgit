@@ -450,7 +450,11 @@ useEffect(() => {
         </div>
 
  
-
+        <div
+            className={`p-4 border-t bg-white transition-transform duration-300 ${
+                   showInput ? 'translate-y-0' : 'translate-y-full'
+            }`}
+        >
 
           <div className="flex items-end bg-gray-100 rounded-3xl p-3">
             <textarea
@@ -476,6 +480,6 @@ useEffect(() => {
           </div>
         </div>
       </div>
-    
+    </div>
   );
 }
